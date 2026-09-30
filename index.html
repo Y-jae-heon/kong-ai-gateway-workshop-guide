@@ -1,0 +1,1252 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Kong AI Gateway 2.0 워크숍 9개 모듈을 실측으로 검증한 실습 가이드">
+<title>Kong AI Gateway 워크숍 가이드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;700;800&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* standalone base reset */
+:root { color-scheme: light; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+</style>
+<style>
+/* Layout: field manual — sticky module index on the left, one long reading column; each module = goal → config → test → expected → pitfalls */
+:root {
+  --paper: #f5f7f8;
+  --sheet: #ffffff;
+  --ink: #15212b;
+  --ink-soft: #4a5a66;
+  --line: #d9e0e4;
+  --tint: #eaf1f2;
+  --signal: #0d6b6e;
+  --signal-ink: #ffffff;
+  --code-bg: #14202a;
+  --code-ink: #dbe6ea;
+  --code-dim: #8aa0ab;
+  --ok: #1f7a4a;       --ok-bg: #e5f3eb;
+  --warn: #9a5a06;     --warn-bg: #fbf0dd;
+  --tip: #1f5f99;      --tip-bg: #e6eff8;
+  --lab: #6b4aa3;      --lab-bg: #efeaf8;
+  --font-display: "Hahmlet", "IBM Plex Sans KR", "Apple SD Gothic Neo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --step--1: 0.84rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --step-4: 2.9rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #0f171d; --sheet: #16212a; --ink: #e3ebef; --ink-soft: #9fb1bb; --line: #2a3943; --tint: #1b2a33;
+    --signal: #4fb8b4; --signal-ink: #0b1418;
+    --code-bg: #0a1116; --code-ink: #d6e2e7; --code-dim: #7d939e;
+    --ok: #6fcf98; --ok-bg: #16301f; --warn: #e7b25c; --warn-bg: #33270f;
+    --tip: #7fb4e6; --tip-bg: #152a3d; --lab: #b8a0e6; --lab-bg: #261e37;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0f171d; --sheet: #16212a; --ink: #e3ebef; --ink-soft: #9fb1bb; --line: #2a3943; --tint: #1b2a33;
+  --signal: #4fb8b4; --signal-ink: #0b1418;
+  --code-bg: #0a1116; --code-ink: #d6e2e7; --code-dim: #7d939e;
+  --ok: #6fcf98; --ok-bg: #16301f; --warn: #e7b25c; --warn-bg: #33270f;
+  --tip: #7fb4e6; --tip-bg: #152a3d; --lab: #b8a0e6; --lab-bg: #261e37;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font-family: var(--font-body); font-size: var(--step-0); line-height: 1.75;
+  padding-inline: 20px;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--signal); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3, h4 { font-family: var(--font-display); line-height: 1.3; text-wrap: balance; margin: 0; }
+p { margin: 0; }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--tint); padding: 0.1em 0.38em; border-radius: 4px; word-break: break-word; }
+
+.shell { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 56px; padding-block: 40px 96px; }
+@media (max-width: 960px) { .shell { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-block: 24px 64px; } }
+
+/* ---------- index ---------- */
+.index { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; font-size: var(--step--1); }
+.index-title { font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.72rem; color: var(--ink-soft); margin-bottom: 12px; }
+.index ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.index a { display: grid; grid-template-columns: 26px 1fr 16px; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px; color: var(--ink-soft); text-decoration: none; line-height: 1.4; }
+.index a:hover { background: var(--tint); color: var(--ink); }
+.index a.active { background: var(--tint); color: var(--ink); font-weight: 600; }
+.index .n { font-family: var(--font-mono); font-size: 0.75rem; color: var(--signal); font-variant-numeric: tabular-nums; }
+.index .done { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--line); }
+.index a.is-done .done { background: var(--ok); border-color: var(--ok); }
+.index .progress { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--ink-soft); }
+.index .bar { height: 6px; border-radius: 3px; background: var(--line); margin-top: 8px; overflow: hidden; }
+.index .bar span { display: block; height: 100%; width: 0; background: var(--ok); transition: width .3s; }
+@media (max-width: 960px) {
+  .index { position: static; max-height: none; background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .index ol { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+}
+
+/* ---------- masthead ---------- */
+main { min-width: 0; }
+.masthead { display: grid; gap: 18px; padding-bottom: 36px; border-bottom: 1px solid var(--line); }
+.eyebrow { font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--signal); font-weight: 700; }
+.masthead h1 { font-size: clamp(2rem, 4.4vw, var(--step-4)); font-weight: 800; letter-spacing: -0.01em; }
+.lead { font-size: var(--step-1); color: var(--ink-soft); max-width: 62ch; line-height: 1.65; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: var(--step--1); color: var(--ink-soft); }
+.meta b { color: var(--ink); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.mark { display: inline-flex; align-items: center; gap: 5px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.02em; padding: 2px 9px; border-radius: 999px; white-space: nowrap; vertical-align: 0.1em; }
+.mark::before { font-family: var(--font-mono); font-weight: 500; }
+.m-ok { color: var(--ok); background: var(--ok-bg); } .m-ok::before { content: "✓"; }
+.m-warn { color: var(--warn); background: var(--warn-bg); } .m-warn::before { content: "!"; }
+.m-tip { color: var(--tip); background: var(--tip-bg); } .m-tip::before { content: "i"; }
+.m-lab { color: var(--lab); background: var(--lab-bg); } .m-lab::before { content: "?"; }
+
+/* ---------- modules ---------- */
+section.module { padding-block: 56px 8px; display: grid; gap: 22px; scroll-margin-top: 16px; }
+section.module + section.module { border-top: 1px solid var(--line); }
+.mod-head { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 18px; align-items: start; }
+.mod-num { font-family: var(--font-mono); font-size: var(--step-3); line-height: 1; color: var(--signal); font-variant-numeric: tabular-nums; padding-top: 4px; }
+.mod-head h2 { font-size: var(--step-3); font-weight: 700; }
+.goal { grid-column: 2; color: var(--ink-soft); max-width: 62ch; }
+.check { grid-row: 1 / span 2; grid-column: 3; display: inline-flex; align-items: center; gap: 8px; font-size: var(--step--1); color: var(--ink-soft); cursor: pointer; user-select: none; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--sheet); white-space: nowrap; }
+.check input { accent-color: var(--ok); width: 16px; height: 16px; margin: 0; }
+.check:has(input:checked) { color: var(--ok); border-color: var(--ok); background: var(--ok-bg); }
+@media (max-width: 620px) {
+  .mod-head { grid-template-columns: auto 1fr; }
+  .check { grid-row: auto; grid-column: 1 / -1; justify-self: start; }
+  .goal { grid-column: 1 / -1; }
+}
+
+h3 { font-size: var(--step-2); font-weight: 700; margin-top: 18px; }
+h4 { font-family: var(--font-body); font-size: var(--step-1); font-weight: 700; margin-top: 8px; }
+.prose { display: grid; gap: 14px; max-width: 70ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+
+/* deep-dive block */
+.deep { display: grid; gap: 20px; background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; padding: clamp(18px, 3vw, 32px); margin-top: 12px; }
+.deep-tag { font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; color: var(--lab); }
+.deep > h3 { margin-top: 0; }
+
+/* callouts */
+.note { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; padding: 14px 16px; border-radius: 10px; background: var(--tint); max-width: 78ch; }
+.note .mark { margin-top: 3px; }
+.note.warn { background: var(--warn-bg); } .note.ok { background: var(--ok-bg); } .note.tip { background: var(--tip-bg); } .note.lab { background: var(--lab-bg); }
+.note > div { display: grid; gap: 6px; }
+@media (max-width: 620px) {
+  .note { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .note .mark { justify-self: start; margin-top: 0; }
+}
+
+/* tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--sheet); }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.55; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 0.76rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-soft); background: var(--tint); font-weight: 700; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hit { color: var(--ok); font-weight: 700; } .miss { color: var(--warn); font-weight: 700; }
+
+/* on/off matrix */
+.pill { display: inline-block; font-family: var(--font-mono); font-size: 0.74rem; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.p-on { background: var(--signal); color: var(--signal-ink); font-weight: 500; }
+.p-off { color: var(--ink-soft); border: 1px solid var(--line); }
+.p-mid { color: var(--ink); background: var(--tint); }
+
+/* code */
+.code { position: relative; background: var(--code-bg); color: var(--code-ink); border-radius: 10px; overflow: hidden; }
+.code-bar { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px 6px 14px; font-family: var(--font-mono); font-size: 0.72rem; color: var(--code-dim); border-bottom: 1px solid rgba(255,255,255,0.07); }
+.copy { font: inherit; color: var(--code-ink); background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+.copy:hover { background: rgba(255,255,255,0.14); }
+pre { margin: 0; padding: 14px 16px; overflow-x: auto; font-family: var(--font-mono); font-size: 0.84rem; line-height: 1.6; tab-size: 2; }
+pre code { background: none; padding: 0; font-size: inherit; color: inherit; word-break: normal; }
+.c { color: var(--code-dim); }
+
+/* diagram */
+figure { margin: 0; display: grid; gap: 8px; }
+figcaption { font-size: var(--step--1); color: var(--ink-soft); }
+.diagram { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 18px; overflow-x: auto; }
+.diagram svg { display: block; width: 100%; min-width: 640px; height: auto; }
+.diagram .box { fill: var(--tint); stroke: var(--line); }
+.diagram .box-hi { fill: var(--signal); }
+.diagram .t { fill: var(--ink); font-family: var(--font-body); font-size: 13px; font-weight: 600; }
+.diagram .t-hi { fill: var(--signal-ink); font-family: var(--font-body); font-size: 14px; font-weight: 700; }
+.diagram .t-s { fill: var(--ink-soft); font-family: var(--font-mono); font-size: 11px; }
+.diagram .t-sh { fill: var(--signal-ink); font-family: var(--font-mono); font-size: 11px; opacity: .85; }
+.diagram .ln { stroke: var(--ink-soft); stroke-width: 1.4; fill: none; }
+.diagram .ln-d { stroke: var(--ink-soft); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.diagram .ah { fill: var(--ink-soft); }
+
+/* OS tabs */
+.os-tabs { display: grid; gap: 0; }
+.tablist { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); }
+.tablist button { font: inherit; font-weight: 600; font-size: 0.95rem; color: var(--ink-soft); background: none; border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; padding: 8px 18px; cursor: pointer; margin-bottom: -1px; }
+.tablist button:hover { color: var(--ink); }
+.tablist button[aria-selected="true"] { color: var(--signal); background: var(--sheet); border-color: var(--line); border-bottom: 1px solid var(--sheet); }
+.tabpanel { display: grid; gap: 14px; background: var(--sheet); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 12px 12px; padding: clamp(16px, 2.5vw, 26px); }
+.tabpanel h4 { margin-top: 6px; }
+.tabpanel[hidden] { display: none; }
+
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.card { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 8px; align-content: start; }
+.card h4 { margin: 0; }
+.card p { color: var(--ink-soft); font-size: 0.95rem; }
+
+footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: var(--step--1); display: grid; gap: 10px; }
+footer ul { margin: 0; padding-left: 1.2em; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="index" aria-label="모듈 목차">
+    <div class="index-title">모듈</div>
+    <ol id="toc">
+      <li><a href="#m0"><span class="n">00</span><span>사전 준비</span><span class="done"></span></a></li>
+      <li><a href="#m1"><span class="n">01</span><span>Quick Start</span><span class="done"></span></a></li>
+      <li><a href="#m2"><span class="n">02</span><span>Key Authentication</span><span class="done"></span></a></li>
+      <li><a href="#m3"><span class="n">03</span><span>AI Rate Limiting</span><span class="done"></span></a></li>
+      <li><a href="#m4"><span class="n">04</span><span>Semantic Prompt Guard</span><span class="done"></span></a></li>
+      <li><a href="#m5"><span class="n">05</span><span>Semantic Caching</span><span class="done"></span></a></li>
+      <li><a href="#m6"><span class="n">06</span><span>Semantic Routing</span><span class="done"></span></a></li>
+      <li><a href="#m7"><span class="n">07</span><span>Decorator &amp; Template</span><span class="done"></span></a></li>
+      <li><a href="#m8"><span class="n">08</span><span>MCP Server</span><span class="done"></span></a></li>
+      <li><a href="#m9"><span class="n">09</span><span>A2A Connectivity</span><span class="done"></span></a></li>
+      <li><a href="#m10"><span class="n">10</span><span>모듈 간 간섭</span><span class="done"></span></a></li>
+      <li><a href="#m11"><span class="n">11</span><span>트러블슈팅</span><span class="done"></span></a></li>
+      <li><a href="#m12"><span class="n">12</span><span>정리</span><span class="done"></span></a></li>
+    </ol>
+    <div class="progress"><span id="progress-text">0 / 13 완료</span><div class="bar"><span id="progress-bar"></span></div></div>
+  </nav>
+
+  <main>
+    <header class="masthead">
+      <div class="eyebrow">Kong AI Gateway 2.0 · 실측 검증판</div>
+      <h1>Kong AI Gateway 워크숍 가이드</h1>
+      <p class="lead">LLM, MCP 도구, A2A 에이전트의 트래픽을 하나의 게이트웨이에서 통제하는 실습입니다. 원본 워크숍의 흐름을 따르되, 실제로 따라 하며 막혔던 지점과 그 해결책을 각 모듈에 넣었습니다.</p>
+      <div class="meta">
+        <span>원본 <a href="https://kong-shubham.github.io/kong-ai-gateway-workshop/" target="_blank" rel="noopener">kong-ai-gateway-workshop</a></span>
+        <span>검증일 <b>2026-09-29</b></span>
+        <span>구성 <b>9개 모듈 + 심화 2편</b></span>
+      </div>
+      <div class="legend" aria-label="표기 설명">
+        <span class="mark m-ok">실측 확인</span>
+        <span class="mark m-warn">원본과 다름</span>
+        <span class="mark m-tip">팁</span>
+        <span class="mark m-lab">미검증 권장안</span>
+      </div>
+    </header>
+
+    <!-- ================= 0 ================= -->
+    <section class="module" id="m0" data-mod="m0">
+      <div class="mod-head">
+        <span class="mod-num">00</span>
+        <h2>사전 준비</h2>
+        <label class="check"><input type="checkbox" id="done-m0"> 학습 완료</label>
+        <p class="goal">Konnect 컨트롤 플레인과 로컬 데이터 플레인, 벡터 검색용 Redis, LLM 키를 준비합니다.</p>
+      </div>
+
+      <figure>
+        <div class="diagram">
+          <svg viewBox="0 0 900 300" role="img" aria-labelledby="arch-t">
+            <title id="arch-t">클라이언트가 Kong 데이터 플레인을 거쳐 LLM, MCP, A2A 에이전트로 가는 구조</title>
+            <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah"/></marker></defs>
+            <rect x="10" y="118" width="150" height="64" rx="10" class="box"/>
+            <text x="85" y="146" text-anchor="middle" class="t">클라이언트</text>
+            <text x="85" y="166" text-anchor="middle" class="t-s">curl · Postman · Agent</text>
+            <line x1="160" y1="150" x2="248" y2="150" class="ln" marker-end="url(#arr)"/>
+            <text x="204" y="140" text-anchor="middle" class="t-s">apikey</text>
+            <rect x="250" y="70" width="230" height="160" rx="12" class="box-hi"/>
+            <text x="365" y="102" text-anchor="middle" class="t-hi">Kong AI Gateway DP</text>
+            <text x="365" y="122" text-anchor="middle" class="t-sh">localhost:8000</text>
+            <text x="270" y="156" class="t-sh">/v1      Model</text>
+            <text x="270" y="178" class="t-sh">/weather MCP Server</text>
+            <text x="270" y="200" class="t-sh">/a2a     Agent</text>
+            <rect x="290" y="10" width="150" height="40" rx="8" class="box"/>
+            <text x="365" y="35" text-anchor="middle" class="t">Konnect CP</text>
+            <line x1="365" y1="50" x2="365" y2="68" class="ln-d" marker-end="url(#arr)"/>
+            <text x="376" y="63" class="t-s">config</text>
+            <rect x="620" y="20" width="270" height="52" rx="10" class="box"/>
+            <text x="755" y="42" text-anchor="middle" class="t">OpenAI · Mistral</text>
+            <text x="755" y="61" text-anchor="middle" class="t-s">chat · embeddings</text>
+            <rect x="620" y="90" width="270" height="52" rx="10" class="box"/>
+            <text x="755" y="112" text-anchor="middle" class="t">Redis Stack :6379</text>
+            <text x="755" y="131" text-anchor="middle" class="t-s">guard · cache · routing 벡터</text>
+            <rect x="620" y="160" width="270" height="52" rx="10" class="box"/>
+            <text x="755" y="182" text-anchor="middle" class="t">api.weatherapi.com</text>
+            <text x="755" y="201" text-anchor="middle" class="t-s">REST → MCP tool</text>
+            <rect x="620" y="230" width="270" height="52" rx="10" class="box"/>
+            <text x="755" y="252" text-anchor="middle" class="t">KongAir Agent :10000</text>
+            <text x="755" y="271" text-anchor="middle" class="t-s">A2A · 자체 LLM</text>
+            <path d="M480 110 C 550 110, 550 46, 618 46" class="ln" marker-end="url(#arr)"/>
+            <path d="M480 128 C 550 128, 550 116, 618 116" class="ln-d" marker-end="url(#arr)"/>
+            <path d="M480 175 C 550 175, 550 186, 618 186" class="ln" marker-end="url(#arr)"/>
+            <path d="M480 198 C 550 198, 550 256, 618 256" class="ln" marker-end="url(#arr)"/>
+          </svg>
+        </div>
+        <figcaption>실선은 요청 경로, 점선은 설정 전달과 벡터 조회입니다.</figcaption>
+      </figure>
+
+      <h3>준비물</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>항목</th><th>내용</th><th>확인 방법</th></tr></thead>
+        <tbody>
+          <tr><td>Konnect PAT</td><td>Personal Access Token <code>kpat_...</code></td><td>—</td></tr>
+          <tr><td>Docker</td><td>DP, Redis, A2A 에이전트 실행</td><td><code>docker info</code></td></tr>
+          <tr><td>OpenAI API 키</td><td>chat과 임베딩 <code>text-embedding-3-small</code>. 사용 한도를 걸어 두세요</td><td><code>/v1/models</code> 호출 시 200</td></tr>
+          <tr><td>Mistral API 키</td><td>6모듈 라우팅용 (선택)</td><td>—</td></tr>
+          <tr><td>kongctl</td><td>선언형 설정 CLI</td><td><code>kongctl version</code></td></tr>
+          <tr><td>Redis Stack</td><td>벡터 검색 <code>FT.*</code> 지원 필수</td><td><code>redis-cli FT._LIST</code> 오류 없음</td></tr>
+          <tr><td>포트</td><td>8000·8443(DP), 6379(Redis), 10000(A2A)</td><td>아래 운영체제별 명령</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>운영체제별 설치</h3>
+      <div class="os-tabs" id="os-tabs">
+        <div class="tablist" role="tablist" aria-label="운영체제 선택">
+          <button type="button" role="tab" id="tab-mac" aria-controls="panel-mac" aria-selected="true">macOS</button>
+          <button type="button" role="tab" id="tab-linux" aria-controls="panel-linux" aria-selected="false">Linux</button>
+          <button type="button" role="tab" id="tab-win" aria-controls="panel-win" aria-selected="false">Windows</button>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="panel-mac" aria-labelledby="tab-mac">
+          <h4>Docker</h4>
+          <p class="prose">Docker Desktop for Mac을 설치합니다. <code>host.docker.internal</code>이 기본으로 동작합니다.</p>
+          <h4>kongctl</h4>
+          <div class="code"><div class="code-bar">zsh</div><pre><code>brew tap kong/kongctl
+brew install --formula kong/kongctl/kongctl
+kongctl version</code></pre></div>
+          <div class="note warn"><span class="mark m-warn">원본과 다름</span><div><p><code>brew install kong/kongctl/kongctl</code>만 실행하면 tap 자동 추가가 거부될 수 있습니다. <code>brew tap</code>을 먼저 실행하세요. <span class="mark m-ok">실측 확인</span></p></div></div>
+          <h4>포트 확인</h4>
+          <div class="code"><div class="code-bar">zsh</div><pre><code>for p in 8000 8443 6379 10000; do lsof -nP -iTCP:$p -sTCP:LISTEN &gt;/dev/null &amp;&amp; echo "$p 사용 중" || echo "$p 비어 있음"; done</code></pre></div>
+          <div class="note warn"><span class="mark m-warn">원본과 다름</span><div><p>Homebrew로 설치한 <code>redis</code>에는 벡터 검색 모듈이 없습니다(<code>ERR unknown command 'FT._LIST'</code>). 6379를 이미 쓰고 있다면 실습 동안 <code>brew services stop redis</code>로 멈추고, 끝난 뒤 <code>brew services start redis</code>로 다시 켜세요. <span class="mark m-ok">실측 확인</span></p></div></div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="panel-linux" aria-labelledby="tab-linux" hidden>
+          <h4>Docker</h4>
+          <p class="prose">Docker Engine과 Compose 플러그인을 설치하고, sudo 없이 쓰도록 사용자를 <code>docker</code> 그룹에 넣습니다.</p>
+          <div class="code"><div class="code-bar">bash</div><pre><code><span class="c"># 설치는 배포판별 공식 안내 참고: https://docs.docker.com/engine/install/</span>
+sudo usermod -aG docker $USER     <span class="c"># 적용하려면 로그아웃 후 다시 로그인</span>
+docker info &amp;&amp; docker compose version</code></pre></div>
+          <h4>kongctl</h4>
+          <div class="code"><div class="code-bar">bash · 설치 스크립트</div><pre><code>curl -fsSL https://get.konghq.com/kongctl | sh
+kongctl version</code></pre></div>
+          <div class="code"><div class="code-bar">bash · 직접 내려받기 (amd64)</div><pre><code><span class="c"># 최신 버전과 arm64 파일은 https://github.com/Kong/kongctl/releases 에서 확인</span>
+curl -sL https://github.com/Kong/kongctl/releases/download/v1.16.0/kongctl_linux_amd64.zip -o kongctl.zip
+unzip kongctl.zip kongctl
+sudo install -m 0755 kongctl /usr/local/bin/kongctl
+kongctl version</code></pre></div>
+          <h4>포트 확인</h4>
+          <div class="code"><div class="code-bar">bash</div><pre><code>ss -ltn | grep -E ':(8000|8443|6379|10000)\b' || echo "모두 비어 있음"</code></pre></div>
+          <div class="note warn"><span class="mark m-warn">원본과 다름</span><div>
+            <p>Linux의 Docker Engine에서는 <code>host.docker.internal</code>이 기본으로 제공되지 않습니다. 워크숍의 Redis 주소 <code>host.docker.internal</code>로는 DP가 Redis를 찾지 못할 수 있습니다. 가장 간단한 방법은 Redis를 DP와 같은 네트워크에 띄우고 <b>컨테이너 이름</b>을 주소로 쓰는 것입니다.</p>
+          </div></div>
+          <div class="code"><div class="code-bar">bash · quickstart 이후 실행 <span class="mark m-lab">미검증 권장안</span></div><pre><code>docker run -d --name redis-stack --network kong-ai-quickstart-net -p 6379:6379 redis/redis-stack-server:latest
+<span class="c"># 4·5·6모듈 Redis host 값: redis-stack  (host.docker.internal 대신)</span></code></pre></div>
+          <p class="prose">OS 패키지(<code>apt install redis-server</code> 등)로 설치한 Redis도 벡터 검색 모듈이 없을 수 있으니 Redis Stack 컨테이너를 쓰세요.</p>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="panel-win" aria-labelledby="tab-win" hidden>
+          <p class="prose">이 가이드의 명령어는 <b>Mac·Linux 터미널용</b>입니다. Windows 기본 터미널(PowerShell, 명령 프롬프트)은 명령어 규칙이 달라서, 그대로 복사해 붙이면 오류가 납니다. quickstart 스크립트도 Mac·Linux 터미널에서만 실행됩니다.</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th>하려는 일</th><th>Mac·Linux 터미널</th><th>Windows PowerShell</th></tr></thead>
+            <tbody>
+              <tr><td>변수 저장</td><td><code>export OPENAI_API_KEY='sk-...'</code></td><td><code>$env:OPENAI_API_KEY = 'sk-...'</code></td></tr>
+              <tr><td>변수 사용</td><td><code>$KONNECT_PROXY_URL</code></td><td><code>$env:KONNECT_PROXY_URL</code></td></tr>
+              <tr><td>여러 줄 설정 넘기기</td><td><code>&lt;&lt; 'EOF' ... EOF</code></td><td>지원 안 함. 파일로 저장해서 넘김</td></tr>
+              <tr><td>curl</td><td><code>curl</code></td><td><code>curl</code>이 다른 명령의 별칭이라 옵션이 맞지 않음</td></tr>
+            </tbody>
+          </table></div>
+          <p class="prose">그래서 <b>WSL2</b>를 권장합니다. Windows 안에서 Linux(Ubuntu) 터미널을 쓸 수 있게 해 주는 기능이라, 그 터미널에서는 이 가이드의 명령을 그대로 쓸 수 있습니다. <span class="mark m-lab">미검증 권장안</span></p>
+          <h4>1. WSL2와 Docker Desktop</h4>
+          <div class="code"><div class="code-bar">PowerShell (관리자)</div><pre><code>wsl --install -d Ubuntu     <span class="c"># 설치 후 재부팅, Ubuntu 사용자 생성</span></code></pre></div>
+          <div class="prose"><ol>
+            <li>Docker Desktop for Windows를 설치합니다.</li>
+            <li>Docker Desktop → Settings → General에서 <b>Use the WSL 2 based engine</b>을 켭니다.</li>
+            <li>Settings → Resources → <b>WSL integration</b>에서 Ubuntu를 켭니다.</li>
+            <li>Ubuntu 터미널에서 <code>docker info</code>가 동작하면 준비 완료입니다. Docker Desktop이므로 <code>host.docker.internal</code>도 동작합니다.</li>
+          </ol></div>
+          <h4>2. kongctl (WSL Ubuntu 안에서)</h4>
+          <div class="code"><div class="code-bar">bash · WSL</div><pre><code>sudo apt-get update &amp;&amp; sudo apt-get install -y unzip
+curl -fsSL https://get.konghq.com/kongctl | sh
+kongctl version</code></pre></div>
+          <h4>WSL 없이 PowerShell만 쓰는 경우</h4>
+          <div class="prose"><ul>
+            <li>kongctl: <a href="https://github.com/Kong/kongctl/releases" target="_blank" rel="noopener">GitHub releases</a>에서 <code>kongctl_windows_amd64.zip</code>을 받아 압축을 풀고, 폴더를 PATH에 추가합니다.</li>
+            <li>quickstart 스크립트는 bash용이라 PowerShell에서 실행할 수 없습니다. Konnect UI에서 AI Gateway를 만들고, 화면이 알려 주는 <code>docker run</code> 명령으로 DP를 띄우세요.</li>
+            <li>PowerShell 5의 <code>curl</code>은 <code>Invoke-WebRequest</code>의 별칭입니다. 테스트에는 <code>curl.exe</code>를 쓰거나 Postman을 쓰세요. 이 가이드의 <code>$VAR</code>, heredoc 문법은 PowerShell에서 동작하지 않습니다.</li>
+          </ul></div>
+          <h4>포트 확인</h4>
+          <div class="code"><div class="code-bar">PowerShell</div><pre><code>8000,8443,6379,10000 | % { if (Get-NetTCPConnection -LocalPort $_ -State Listen -ErrorAction SilentlyContinue) { "$_ 사용 중" } else { "$_ 비어 있음" } }</code></pre></div>
+        </div>
+      </div>
+
+      <h3>Redis Stack</h3>
+      <div class="code"><div class="code-bar">bash</div><pre><code>docker run -d --name redis-stack -p 6379:6379 redis/redis-stack-server:latest
+docker exec redis-stack redis-cli FT._LIST   <span class="c"># 오류가 없으면 준비 완료</span></code></pre></div>
+      <p class="prose">Linux Docker Engine이라면 위 Linux 탭의 방법(DP 네트워크에 띄우기)을 쓰세요.</p>
+
+      <h3>Quickstart: CP와 로컬 DP 생성</h3>
+      <div class="code"><div class="code-bar">bash</div><pre><code>export KONNECT_TOKEN='kpat_...'
+curl -Ls https://get.konghq.com/ai | bash -s -- -k $KONNECT_TOKEN
+
+<span class="c"># 스크립트가 마지막에 출력하는 export 문을 실행 (AI_GATEWAY_ID, KONNECT_PROXY_URL 등)</span>
+export OPENAI_API_KEY='sk-...'
+export OPENAI_AUTH_HEADER="Bearer $OPENAI_API_KEY"</code></pre></div>
+      <div class="prose"><p>Konnect에 AI Gateway <code>ai-quickstart</code>가 만들어지고, 로컬 Docker에 DP(<code>kong/kong-ai-gateway</code>, 8000·8443)가 뜹니다. <code>curl -i $KONNECT_PROXY_URL/</code>이 <code>404 no Route matched</code>를 돌려주면 정상입니다.</p></div>
+      <div class="note tip"><span class="mark m-tip">팁</span><div><p>Konnect가 보여 주는 DP 실행 명령에는 <b>DP 인증서의 개인키</b>(<code>KONG_CLUSTER_CERT_KEY</code>)가 들어 있습니다. 채팅이나 문서에 붙여 넣지 마세요. 노출됐다면 Konnect에서 인증서를 삭제하고 다시 발급합니다.</p></div></div>
+      <div class="note warn"><span class="mark m-warn">원본과 다름</span><div><p>다른 DP가 8000을 쓰고 있으면 <code>port is already allocated</code>가 납니다. 기존 DP를 멈춘 직후 새 DP를 켜면 포트 연결이 빠질 수 있으니, 응답이 없으면 <code>docker restart &lt;dp&gt;</code>를 실행하세요.</p></div></div>
+    </section>
+
+    <!-- ================= 1 ================= -->
+    <section class="module" id="m1" data-mod="m1">
+      <div class="mod-head">
+        <span class="mod-num">01</span>
+        <h2>AI Gateway Quick Start</h2>
+        <label class="check"><input type="checkbox" id="done-m1"> 학습 완료</label>
+        <p class="goal">OpenAI Provider와 <code>my-gpt-4o</code> Model을 만들고, Kong을 거쳐 LLM을 호출합니다.</p>
+      </div>
+      <div class="code"><div class="code-bar">kongctl</div><pre><code>kongctl apply -f - --auto-approve --pat "$KONNECT_TOKEN" &lt;&lt; 'EOF'
+ai_gateway_model_providers:
+  - ref: generic-openai
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    name: generic-openai
+    display_name: "generic-openai"
+    type: openai
+    config:
+      auth:
+        type: basic
+        headers:
+          - name: Authorization
+            value: !secret {source: !env OPENAI_AUTH_HEADER}
+
+ai_gateway_models:
+  - ref: my-gpt-4o
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    name: my-gpt-4o
+    display_name: "my-gpt-4o"
+    type: model
+    formats:
+      - type: openai
+    config:
+      route:
+        paths:
+          - /v1
+        model:
+          body_param: model
+          values:
+            - my-gpt-4o
+    targets:
+      - name: gpt-4o
+        provider: generic-openai
+        config:
+          type: openai
+    policies: []
+    capabilities:
+      - generate
+EOF</code></pre></div>
+      <div class="code"><div class="code-bar">테스트</div><pre><code>curl -X POST "$KONNECT_PROXY_URL/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  --json '{"messages":[{"role":"user","content":"Hello Kong!"}],"model":"my-gpt-4o"}'</code></pre></div>
+      <div class="note ok"><span class="mark m-ok">실측 확인</span><div><p>200, <code>"model": "gpt-4o-2024-08-06"</code>. 클라이언트는 Kong의 별칭 <code>my-gpt-4o</code>만 알고, 실제 모델과 키는 Kong이 관리합니다.</p></div></div>
+    </section>
+
+    <!-- ================= 2 ================= -->
+    <section class="module" id="m2" data-mod="m2">
+      <div class="mod-head">
+        <span class="mod-num">02</span>
+        <h2>Key Authentication</h2>
+        <label class="check"><input type="checkbox" id="done-m2"> 학습 완료</label>
+        <p class="goal">Consumer별 API 키가 있어야 모델을 쓸 수 있게 합니다.</p>
+      </div>
+      <div class="prose"><ol>
+        <li><code>my-gpt-4o</code> → <b>Access</b> 탭 → <b>Add auth strategy</b> → 이름 <code>Key-Auth</code>, 헤더는 기본값 <code>apikey</code></li>
+        <li><b>Consumers</b> → 새 API Key consumer <code>ai-developer</code></li>
+        <li>Credentials 탭 → <b>API Key</b> 생성 (예: <code>my-secret-key</code>)</li>
+      </ol></div>
+      <div class="code"><div class="code-bar">테스트</div><pre><code><span class="c"># 키 없음 → 401</span>
+curl -s -o /dev/null -w "%{http_code}\n" -X POST "$KONNECT_PROXY_URL/v1/chat/completions" \
+  --json '{"messages":[{"role":"user","content":"Are you secure?"}],"model":"my-gpt-4o"}'
+
+<span class="c"># 키 있음 → 200</span>
+curl -X POST "$KONNECT_PROXY_URL/v1/chat/completions" -H "apikey: my-secret-key" \
+  --json '{"messages":[{"role":"user","content":"Are you secure?"}],"model":"my-gpt-4o"}'</code></pre></div>
+      <div class="note ok"><span class="mark m-ok">실측 확인</span><div><p>401 다음 200. 이 모듈부터는 모든 모델 요청에 <code>apikey</code> 헤더가 필요합니다.</p></div></div>
+    </section>
+
+    <!-- ================= 3 ================= -->
+    <section class="module" id="m3" data-mod="m3">
+      <div class="mod-head">
+        <span class="mod-num">03</span>
+        <h2>AI Rate Limiting Advanced</h2>
+        <label class="check"><input type="checkbox" id="done-m3"> 학습 완료</label>
+        <p class="goal">요청 수가 아니라 LLM 토큰 수로 사용량을 제한합니다. 목적은 비용 통제입니다.</p>
+      </div>
+      <div class="prose"><ol>
+        <li><code>my-gpt-4o</code> → <b>Policies</b> → <b>AI Rate Limiting Advanced</b> → Limit 추가</li>
+        <li>Strategy <code>local</code> (테스트용, 운영에서는 <code>redis</code>)</li>
+        <li>Limits <code>[ { "limit": 200, "window_size": 60 } ]</code>: 60초에 토큰 200개</li>
+        <li>Tokens count strategy <code>total_tokens</code> → Save and Next</li>
+        <li>Add entity → 모델 <code>my-gpt-4o</code></li>
+      </ol></div>
+      <div class="code"><div class="code-bar">테스트</div><pre><code>for i in {1..5}; do
+  curl -s -o /dev/null -w "req $i -&gt; %{http_code}\n" -X POST "$KONNECT_PROXY_URL/v1/chat/completions" \
+    -H "apikey: my-secret-key" \
+    --json '{"messages":[{"role":"user","content":"Write a long story about API Gateways."}],"model":"my-gpt-4o"}'
+done</code></pre></div>
+      <div class="grid-2">
+        <div class="card"><h4>요청 수 기반 rate-limiting</h4><p>한도에 닿는 순간 차단합니다. 요청 크기는 따지지 않습니다.</p></div>
+        <div class="card"><h4>토큰 기반 AI rate limiting</h4><p>토큰은 응답을 받은 뒤에 집계됩니다. 그래서 한도를 넘기는 첫 요청은 통과하고, 그다음 요청부터 429로 막힙니다.</p></div>
+      </div>
+      <div class="note warn"><span class="mark m-warn">원본과 다름</span><div><p>다음 모듈로 넘어가기 전에 한도를 크게(예: 100000) 올리거나 정책을 끄세요. 그대로 두면 4~6모듈 테스트가 429로 막힙니다. 429는 prompt guard의 400보다 먼저 판정되어 원인을 구분하기도 어려워집니다.</p></div></div>
+    </section>
+
+    <!-- ================= 4 ================= -->
+    <section class="module" id="m4" data-mod="m4">
+      <div class="mod-head">
+        <span class="mod-num">04</span>
+        <h2>Semantic Prompt Guard</h2>
+        <label class="check"><input type="checkbox" id="done-m4"> 학습 완료</label>
+        <p class="goal">키워드가 아니라 의미 유사도로 금지 주제를 막습니다.</p>
+      </div>
+      <p class="prose">위치: <code>my-gpt-4o</code> → Policies → <b>AI Semantic Prompt Guard</b></p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>필드</th><th>값</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td>Embeddings provider / model</td><td><code>openai</code> / <code>text-embedding-3-small</code></td><td></td></tr>
+          <tr><td>Embeddings Auth</td><td>Header <code>Authorization</code>, Value <code>Bearer sk-...</code></td><td><span class="mark m-warn">원본과 다름</span> Provider 키와 별도로 입력. <code>Bearer</code> 뒤 공백 필수</td></tr>
+          <tr><td>Vectordb strategy</td><td><code>redis</code></td><td></td></tr>
+          <tr><td>Redis host / port</td><td><code>host.docker.internal</code> / <code>6379</code></td><td></td></tr>
+          <tr><td><b>Dimensions</b></td><td><code>1536</code></td><td><span class="mark m-warn">원본과 다름</span> 필수 (<code>required field missing</code>)</td></tr>
+          <tr><td><b>Distance metric</b></td><td><code>cosine</code></td><td><span class="mark m-warn">원본과 다름</span> 필수</td></tr>
+          <tr><td><b>Threshold</b></td><td><code>0.5</code></td><td><span class="mark m-warn">원본과 다름</span> 비워 두면 오류 없이 아무것도 막지 않음</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>거부 주제는 질문 형태로</h3>
+      <div class="code"><div class="code-bar">Deny prompts</div><pre><code>Provide financial or investment advice
+Generate malicious code or exploits
+Which stocks should I buy or invest in
+Stock picks and investment recommendations for my savings or retirement</code></pre></div>
+      <p class="prose">원본의 추상적인 문구만으로는 테스트 질문이 잡히지 않습니다. "What stocks should I invest my retirement savings in today?"와 비교한 실측값입니다.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>거부 주제</th><th>유사도</th><th>거리</th><th>threshold 0.5 판정</th></tr></thead>
+        <tbody>
+          <tr><td>Provide financial or investment advice</td><td class="num">0.352</td><td class="num">0.648</td><td class="miss">통과</td></tr>
+          <tr><td>Which stocks should I buy or invest in</td><td class="num">0.679</td><td class="num">0.321</td><td class="hit">차단</td></tr>
+          <tr><td>Stock picks and investment recommendations for my savings or retirement</td><td class="num">0.726</td><td class="num">0.274</td><td class="hit">차단</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="code"><div class="code-bar">테스트</div><pre><code><span class="c"># 허용 → 200</span>
+curl -X POST "$KONNECT_PROXY_URL/v1/chat/completions" -H "apikey: my-secret-key" \
+  --json '{"messages":[{"role":"user","content":"What is an API Gateway?"}],"model":"my-gpt-4o"}'
+
+<span class="c"># 차단 → 400 {"error":{"message":"bad request"}}</span>
+curl -X POST "$KONNECT_PROXY_URL/v1/chat/completions" -H "apikey: my-secret-key" \
+  --json '{"messages":[{"role":"user","content":"What stocks should I invest my retirement savings in today?"}],"model":"my-gpt-4o"}'</code></pre></div>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>질문 (threshold 0.5)</th><th>결과</th></tr></thead>
+        <tbody>
+          <tr><td>What is an API Gateway?</td><td class="num">200</td></tr>
+          <tr><td>How do I rate limit an API?</td><td class="num">200</td></tr>
+          <tr><td>What stocks should I invest my retirement savings in today?</td><td class="num hit">400</td></tr>
+          <tr><td>Is it a good time to buy Tesla shares?</td><td class="num miss">200 · 우회</td></tr>
+          <tr><td>Write a Python script that exploits a buffer overflow</td><td class="num miss">200 · 우회</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note tip"><span class="mark m-tip">팁</span><div><p>우회된 두 질문은 semantic guard의 한계이자 튜닝 포인트입니다. 비슷한 질문 예시를 거부 주제로 더 넣거나 threshold를 올립니다. threshold를 올릴수록 정상 질문이 잘못 막힐 위험도 커집니다.</p></div></div>
+
+      <h3>트러블슈팅</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>증상</th><th>원인</th><th>조치</th></tr></thead>
+        <tbody>
+          <tr><td><code>unable to generate embeddings ... 401</code></td><td>임베딩 Auth 값 오류 (<code>Bearer sk--</code> 그대로, <code>Bearer</code> 누락)</td><td>Header Value 다시 입력</td></tr>
+          <tr><td>막혀야 할 질문이 200</td><td>threshold 미설정, 추상적인 거부 주제</td><td>threshold 0.5, 질문형 거부 주제</td></tr>
+          <tr><td>응답이 Mistral 모델에서 옴</td><td>6모듈용 Mistral target이 가중치로 섞임</td><td>4~5모듈 동안 target 1개 유지</td></tr>
+          <tr><td><code>AI token rate limit exceeded</code></td><td>3모듈 한도</td><td>한도 상향</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ================= 5 ================= -->
+    <section class="module" id="m5" data-mod="m5">
+      <div class="mod-head">
+        <span class="mod-num">05</span>
+        <h2>Semantic Caching</h2>
+        <label class="check"><input type="checkbox" id="done-m5"> 학습 완료</label>
+        <p class="goal">의미가 비슷한 질문에는 LLM을 부르지 않고 캐시로 답해 비용과 지연을 줄입니다.</p>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>필드</th><th>값</th></tr></thead>
+        <tbody>
+          <tr><td>Embeddings</td><td><code>openai</code> / <code>text-embedding-3-small</code>, Auth <code>Authorization: Bearer sk-...</code></td></tr>
+          <tr><td>Vectordb</td><td><code>redis</code>, <code>host.docker.internal:6379</code>, dimensions <code>1536</code>, metric <code>cosine</code></td></tr>
+          <tr><td>Threshold</td><td><code>0.3</code> (원본 값)</td></tr>
+        </tbody>
+      </table></div>
+      <div class="code"><div class="code-bar">테스트 · 헤더로 확인</div><pre><code>for q in "Explain Kong API Gateway in one sentence." \
+         "Describe Kong API Gateway in 1 sentence." \
+         "Explain Redis in one sentence."; do
+  curl -s -D - -o /dev/null -X POST "$KONNECT_PROXY_URL/v1/chat/completions" -H "apikey: my-secret-key" \
+    --json "{\"messages\":[{\"role\":\"user\",\"content\":\"$q\"}],\"model\":\"my-gpt-4o\"}" | grep -iE "x-cache-status|age:"
+done</code></pre></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>질문</th><th>X-Cache-Status</th><th>응답 시간</th></tr></thead>
+        <tbody>
+          <tr><td>Explain Kong API Gateway in one sentence.</td><td class="miss">Miss</td><td class="num">~1.3s</td></tr>
+          <tr><td>What is Kong API Gateway? Answer in a single sentence.</td><td class="hit">Hit · Age 45 · TTL 255</td><td class="num">~0.5s</td></tr>
+          <tr><td>Explain Redis in one sentence.</td><td class="miss">Miss · 다른 주제</td><td class="num">~2.0s</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note tip"><span class="mark m-tip">팁</span><div><p>캐시 응답은 본문과 <code>created</code>가 첫 응답과 같고, <code>id</code>가 해시값입니다. 캐시 키에 target 이름이 들어가므로(<code>...:openai-gpt-4o:...</code>) 라우팅으로 다른 target에 배정되면 Miss가 납니다.</p></div></div>
+    </section>
+
+    <!-- ================= 6 ================= -->
+    <section class="module" id="m6" data-mod="m6">
+      <div class="mod-head">
+        <span class="mod-num">06</span>
+        <h2>Semantic Routing</h2>
+        <label class="check"><input type="checkbox" id="done-m6"> 학습 완료</label>
+        <p class="goal">같은 모델 별칭으로 요청해도 질문의 의미에 따라 다른 LLM으로 보냅니다.</p>
+      </div>
+      <div class="prose"><ol>
+        <li>Model Provider에 Mistral 추가 (API 키)</li>
+        <li><code>my-gpt-4o</code> Targets에 Mistral 모델(예: <code>ministral-3b-2512</code>) 추가</li>
+        <li>Balancer Algorithm <code>semantic</code></li>
+        <li>각 Target의 Semantic description 입력 (아래 표)</li>
+        <li>Balancer Embeddings <code>text-embedding-3-small</code>, Vectordb 설정 (아래 표)</li>
+      </ol></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Target</th><th>Description (따옴표 없이)</th></tr></thead>
+        <tbody>
+          <tr><td>gpt-4o</td><td><code>Conversational chat or creative writing</code></td></tr>
+          <tr><td>ministral-3b</td><td><code>Data extraction and strict JSON parsing</code></td></tr>
+        </tbody>
+      </table></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Balancer Vectordb</th><th>값</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td>host / port</td><td><code>host.docker.internal</code> / <code>6379</code></td><td></td></tr>
+          <tr><td>dimensions / metric</td><td><code>1536</code> / <code>cosine</code></td><td></td></tr>
+          <tr><td><b>SSL</b></td><td><code>false</code></td><td><span class="mark m-warn">원본과 다름</span> UI 기본값이 켜져 있으면 <code>failed to get balancer instance</code></td></tr>
+          <tr><td><b>Threshold</b></td><td><code>0.8</code></td><td><span class="mark m-warn">원본과 다름</span> 원본 0.3이면 <code>No peers are available</code></td></tr>
+        </tbody>
+      </table></div>
+      <div class="note warn"><span class="mark m-warn">원본과 다름</span><div><p>원본 문서의 <code>"..."</code>를 복사하면 따옴표까지 값에 들어갑니다. 입력 후 확인하고 빼 주세요.</p></div></div>
+
+      <h3>왜 threshold 0.8인가</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>질문</th><th>↔ gpt-4o 설명</th><th>↔ ministral 설명</th></tr></thead>
+        <tbody>
+          <tr><td>Write a short poem about clouds.</td><td class="num hit">0.739</td><td class="num">1.008</td></tr>
+          <tr><td>Extract name and age as JSON: John is 32 years old.</td><td class="num">0.889</td><td class="num hit">0.574</td></tr>
+          <tr><td>What is an API Gateway?</td><td class="num">0.888</td><td class="num">0.887</td></tr>
+        </tbody>
+      </table></div>
+      <p class="prose">값은 코사인 거리이며, threshold 이하일 때만 매칭됩니다. 짧은 설명과 실제 질문 사이의 거리는 보통 0.55~0.75라서 0.3 이내는 사실상 나오지 않습니다.</p>
+
+      <div class="code"><div class="code-bar">테스트</div><pre><code><span class="c"># → gpt-4o</span>
+curl -s -X POST "$KONNECT_PROXY_URL/v1/chat/completions" -H "apikey: my-secret-key" \
+  --json '{"messages":[{"role":"user","content":"Write a short poem about clouds."}],"model":"my-gpt-4o"}' | grep -o '"model":"[^"]*"'
+
+<span class="c"># → ministral-3b</span>
+curl -s -X POST "$KONNECT_PROXY_URL/v1/chat/completions" -H "apikey: my-secret-key" \
+  --json '{"messages":[{"role":"user","content":"Extract the names and ages from this text: Alice is 30, Bob is 25. Output strictly as JSON."}],"model":"my-gpt-4o"}' | grep -o '"model":"[^"]*"'</code></pre></div>
+      <div class="note ok"><span class="mark m-ok">실측 확인</span><div><p>시는 <code>gpt-4o-2024-08-06</code>, JSON 추출은 <code>ministral-3b-2512</code>로 갔습니다. 어느 설명과도 가깝지 않은 일반 질문("Hello Kong!")은 503 <code>No peers are available</code>이 납니다. 해결책은 10장에 있습니다.</p></div></div>
+    </section>
+
+    <!-- ================= 7 ================= -->
+    <section class="module" id="m7" data-mod="m7">
+      <div class="mod-head">
+        <span class="mod-num">07</span>
+        <h2>Prompt Decorator &amp; Template</h2>
+        <label class="check"><input type="checkbox" id="done-m7"> 학습 완료</label>
+        <p class="goal">system 지시를 자동으로 붙이고(Decorator), 승인된 프롬프트 틀만 허용합니다(Template).</p>
+      </div>
+
+      <h3>Decorator</h3>
+      <p class="prose">Role <code>system</code>, Prepend: <code>You are a helpful assistant for Kong API Gateway. Format output in Markdown.</code></p>
+
+      <h3>Template</h3>
+      <p class="prose">Template name <code>support-query</code>, <b>Allow Untemplated Requests</b> <code>false</code>. 본문은 채팅 요청 JSON 전체여야 합니다.</p>
+      <div class="code"><div class="code-bar">Template 본문</div><pre><code>{"messages":[{"role":"user","content":"Answer the following user question: {{question}}. Context: {{context}}"}]}</code></pre></div>
+      <div class="note warn"><span class="mark m-warn">원본과 다름</span><div><p>원본의 템플릿 본문(일반 문장)과 요청 형식(최상위 <code>question</code>, <code>context</code>)으로는 <code>only 'llm/v1/chat' and 'llm/v1/completions' formats are supported for templating</code> 오류가 납니다. <a href="https://developer.konghq.com/plugins/ai-prompt-template/" target="_blank" rel="noopener">공식 문서</a> 형식을 쓰세요.</p></div></div>
+      <div class="code"><div class="code-bar">테스트 · 공식 형식</div><pre><code>curl -X POST "$KONNECT_PROXY_URL/v1/chat/completions" -H "apikey: my-secret-key" \
+  --json '{
+    "messages": "{template://support-query}",
+    "properties": {
+      "question": "How do I setup routing?",
+      "context": "I am using Kong AI Gateway 2.0."
+    },
+    "model": "my-gpt-4o"
+  }'</code></pre></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>요청</th><th>결과</th></tr></thead>
+        <tbody>
+          <tr><td>템플릿 요청 (공식 형식)</td><td>200, Markdown 답변 (Decorator 적용)</td></tr>
+          <tr><td>일반 요청 <code>"messages":[...]</code></td><td>400 <code>this LLM route only supports templated requests</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>allow_untemplated_requests는 왜 false인가</h3>
+      <div class="grid-2">
+        <div class="card"><h4><code>true</code> · 기본값</h4><p>템플릿 요청과 일반 요청을 모두 허용합니다. 템플릿은 자주 쓰는 프롬프트를 저장해 두는 편의 기능이 됩니다.</p></div>
+        <div class="card"><h4><code>false</code> · 통제 수단</h4><p>템플릿 요청만 허용합니다. 클라이언트는 변수만 채우고 프롬프트 틀은 Kong이 관리합니다. 용도 외 사용과 비용을 막고, 프롬프트를 바꿀 때 앱을 다시 배포할 필요가 없습니다.</p></div>
+      </div>
+      <p class="prose">한계도 있습니다. 변수 값 안에 들어온 프롬프트 인젝션은 막지 못하고, Claude Code나 A2A 에이전트처럼 자유롭게 대화해야 하는 클라이언트는 이 모델을 쓸 수 없습니다.</p>
+      <div class="note warn"><span class="mark m-warn">원본과 다름</span><div><p>Semantic Prompt Guard와 같은 모델에서 함께 쓸 수 없습니다(실측). Guard가 템플릿이 적용되기 전의 요청을 먼저 검사해서 500 <code>ai-semantic-prompt-guard only supports llm/v1/chat</code>이 납니다. 7모듈 동안 Guard를 끄세요. 다른 모듈로 돌아갈 때는 <code>allow_untemplated_requests</code>를 <code>true</code>로 바꾸거나 Template 정책을 끕니다.</p></div></div>
+
+      <div class="deep" id="m7-deep">
+        <span class="deep-tag">심화</span>
+        <h3>Decorator의 역할과 코딩 에이전트 활용</h3>
+        <p class="prose">Decorator는 <b>클라이언트를 고치지 않고 게이트웨이에서 모든 LLM 요청에 지시문을 끼워 넣는</b> 정책입니다.</p>
+        <div class="code"><div class="code-bar">동작</div><pre><code>클라이언트 요청                          Kong Decorator 적용 후 → LLM
+messages: [                            messages: [
+  {user: "로그인 API 만들어줘"}             {system: "&lt;조직 공통 지시&gt;"},   <span class="c">← prepend</span>
+]                                        {user: "로그인 API 만들어줘"},
+                                         {user: "&lt;마무리 지시&gt;"}          <span class="c">← append (선택)</span>
+                                       ]</code></pre></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>지시 위치</th><th>예</th><th>특징</th></tr></thead>
+          <tbody>
+            <tr><td>클라이언트</td><td>앱의 system prompt, <code>CLAUDE.md</code>, <code>AGENTS.md</code></td><td>팀·저장소별. 사용자가 바꾸거나 빼먹을 수 있음</td></tr>
+            <tr><td><b>게이트웨이 (Decorator)</b></td><td>Kong 정책</td><td>조직 전체에 강제. 클라이언트 종류와 무관. 바꿔도 재배포 불필요. 감사 가능</td></tr>
+          </tbody>
+        </table></div>
+        <p class="prose">둘은 대체 관계가 아니라 계층입니다. 게이트웨이에는 조직 공통 규칙(보안, 컴플라이언스, 코딩 표준)을, 클라이언트에는 프로젝트별 세부 규칙을 둡니다.</p>
+
+        <h4>사례: 코딩 에이전트의 코드 중복 억제</h4>
+        <p class="prose">코딩 에이전트는 매 작업을 새로 작성하려는 경향이 있어서, 기존 유틸이 있어도 비슷한 함수를 또 만듭니다. 세션이 바뀌면 이전 맥락이 없어 중복이 쌓입니다. 조직 공통 지시로 이렇게 넣을 수 있습니다.</p>
+        <div class="code"><div class="code-bar">Decorator · prepend · system</div><pre><code>You are working in an existing codebase. Before writing any new function, class, or file:
+1. Search the repository for existing implementations that do the same or similar thing.
+2. If one exists, reuse or extend it instead of creating a duplicate.
+3. Prefer editing existing files over creating new ones.
+4. Keep changes minimal; do not copy-paste code blocks — extract a shared helper if logic repeats.
+5. When you deliberately add something similar to existing code, state why reuse was not possible.</code></pre></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>목적</th><th>지시문 예</th></tr></thead>
+          <tbody>
+            <tr><td>보안</td><td><code>Never hardcode secrets, tokens, or passwords. Use environment variables or the secret manager.</code></td></tr>
+            <tr><td>컴플라이언스</td><td><code>Do not include customer personal data in code comments, logs, or test fixtures.</code></td></tr>
+            <tr><td>코딩 표준</td><td><code>Follow the existing lint and formatting rules. Add tests for new logic.</code></td></tr>
+            <tr><td>출력 형식 (append)</td><td><code>Respond in Korean. Format code as unified diff.</code></td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>한계</h4>
+        <div class="table-wrap"><table>
+          <thead><tr><th>한계</th><th>설명</th><th>보완</th></tr></thead>
+          <tbody>
+            <tr><td>권고일 뿐</td><td>모델이 지시를 무시할 수 있어 중복 0을 보장하지 못함</td><td>CI 중복 탐지(jscpd, SonarQube), 코드 리뷰</td></tr>
+            <tr><td>지시 충돌</td><td>에이전트 자체 prompt나 <code>CLAUDE.md</code>와 어긋나면 동작 예측이 어려움</td><td>조직 지시는 짧고 원칙 수준으로</td></tr>
+            <tr><td>토큰 비용</td><td>매 요청에 붙음. 에이전트는 작업 하나에 수십~수백 번 호출</td><td>지시문을 짧게</td></tr>
+            <tr><td>프롬프트 캐시</td><td>지시문이 매번 바뀌면(시각, 사용자명 삽입) 제공자의 prompt caching이 깨져 비용과 지연이 늘어남</td><td>고정 텍스트만 사용</td></tr>
+            <tr><td>적용 범위</td><td>Kong을 거치는 호출에만 적용</td><td>LLM 호출 경로를 Kong으로 일원화 (9장)</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>Decorator와 Template 비교</h4>
+        <div class="table-wrap"><table>
+          <thead><tr><th></th><th>Decorator</th><th>Template</th></tr></thead>
+          <tbody>
+            <tr><td>하는 일</td><td>기존 요청에 메시지를 추가</td><td>요청 전체를 틀로 대체 (변수만 받음)</td></tr>
+            <tr><td>클라이언트 자유도</td><td>높음</td><td>낮음</td></tr>
+            <tr><td>적합한 곳</td><td>코딩 에이전트, 범용 채팅</td><td>정형 업무 앱 (고객지원 봇 등)</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>Anthropic 형식 코딩 에이전트 연결 시 주의</h4>
+        <div class="note ok"><span class="mark m-ok">실측 확인</span><div>
+          <p>Claude Code → Kong(<code>ai-proxy</code>, anthropic) + Decorator 조합에서 400 <code>tools: Input should be a valid array</code>가 났습니다.</p>
+          <p>Claude Code는 도구가 없어도 <code>tools: []</code>를 보냅니다. Decorator가 JSON을 Lua 테이블로 풀었다가 다시 인코딩하면서 빈 배열이 <code>{}</code>로 바뀌고, Anthropic API가 이를 거부합니다. 임시 해결책은 Decorator 대신 <code>pre-function</code>에서 빈 배열을 보존한 채 <code>system</code>에 직접 넣는 것입니다.</p>
+        </div></div>
+        <div class="code"><div class="code-bar">pre-function (access, Lua)</div><pre><code>local cjson = require("cjson.safe").new()
+cjson.decode_array_with_array_mt(true)          <span class="c">-- [] 를 [] 로 유지</span>
+local body = cjson.decode(kong.request.get_raw_body() or "")
+if type(body) ~= "table" then return end
+local prompt = "&lt;조직 공통 지시&gt;"
+local sys = body.system
+if sys == nil then body.system = prompt
+elseif type(sys) == "string" then body.system = prompt .. "\n" .. sys
+elseif type(sys) == "table" then table.insert(sys, 1, { type = "text", text = prompt }) end
+kong.service.request.set_raw_body(cjson.encode(body))</code></pre></div>
+        <div class="note tip"><span class="mark m-tip">팁</span><div><p>코딩 에이전트용 모델에는 Decorator(또는 위 pre-function)만 붙이고, Template과 semantic routing은 붙이지 않는 편이 안전합니다.</p></div></div>
+      </div>
+    </section>
+
+    <!-- ================= 8 ================= -->
+    <section class="module" id="m8" data-mod="m8">
+      <div class="mod-head">
+        <span class="mod-num">08</span>
+        <h2>MCP Server</h2>
+        <label class="check"><input type="checkbox" id="done-m8"> 학습 완료</label>
+        <p class="goal">REST API(weatherapi)를 MCP tool로 변환해 AI 에이전트에 노출합니다.</p>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>MCP Server 필드</th><th>값</th></tr></thead>
+        <tbody>
+          <tr><td>Display name</td><td><code>weather-mcp</code></td></tr>
+          <tr><td><b>Mode</b></td><td><code>conversion-listener</code> <span class="mark m-warn">원본과 다름</span> 원본은 <code>passthrough-listener</code></td></tr>
+          <tr><td>Upstream URL</td><td><code>https://api.weatherapi.com/v1/current.json</code></td></tr>
+          <tr><td>Base path</td><td><code>/weather</code></td></tr>
+        </tbody>
+      </table></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Tool 필드</th><th>값</th></tr></thead>
+        <tbody>
+          <tr><td>Name</td><td><code>get-current-weather</code></td></tr>
+          <tr><td>Description</td><td><code>Get current weather for a location</code></td></tr>
+          <tr><td>Method</td><td><code>GET</code></td></tr>
+          <tr><td>Path</td><td>비워 둠. upstream URL을 직접 호출합니다 <span class="mark m-ok">실측 확인</span></td></tr>
+          <tr><td>Query</td><td><code>key</code> = weatherapi 키 (원본 공용 키 또는 <a href="https://www.weatherapi.com" target="_blank" rel="noopener">weatherapi.com</a> 무료 발급)</td></tr>
+        </tbody>
+      </table></div>
+      <div class="code"><div class="code-bar">Parameters</div><pre><code>[{"description":"Location query. Accepts US Zipcode, UK Postcode, Canada Postalcode, IP address, latitude/longitude, or city name.","in":"query","name":"q","required":true,"schema":{"type":"string"}}]</code></pre></div>
+      <div class="grid-2">
+        <div class="card"><h4><code>passthrough-listener</code></h4><p>upstream이 이미 MCP 서버일 때 그대로 중계합니다. tool 편집 화면에는 이름과 Access control만 나옵니다.</p></div>
+        <div class="card"><h4><code>conversion-listener</code></h4><p>upstream이 REST API일 때 tool로 변환합니다. Method, Path, Query, Parameters를 입력합니다. 모드는 만든 뒤 바꿀 수 없으니 삭제 후 다시 만드세요.</p></div>
+      </div>
+
+      <h3>테스트</h3>
+      <div class="note warn"><span class="mark m-warn">원본과 다름</span><div><p>원본은 <code>$SESSION_ID</code>를 쓰면서 세션을 받는 initialize 단계를 안내하지 않습니다. 순서대로 실행하세요.</p></div></div>
+      <div class="code"><div class="code-bar">bash · MCP 핸드셰이크와 tool 호출</div><pre><code>URL="$KONNECT_PROXY_URL/weather/"
+H=(-H "Content-Type: application/json" -H "Accept: application/json, text/event-stream")
+
+<span class="c"># 1) initialize → 세션 ID</span>
+SESSION_ID=$(curl -s -D - -o /dev/null -X POST "$URL" "${H[@]}" \
+  --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"1"}}}' \
+  | grep -i '^mcp-session-id' | awk '{print $2}' | tr -d '\r')
+echo $SESSION_ID
+
+<span class="c"># 2) initialized 알림 → 202</span>
+curl -s -o /dev/null -w "%{http_code}\n" -X POST "$URL" "${H[@]}" -H "Mcp-Session-Id: $SESSION_ID" \
+  --data '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+
+<span class="c"># 3) tools/list</span>
+curl -s -X POST "$URL" "${H[@]}" -H "Mcp-Session-Id: $SESSION_ID" \
+  --data '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+
+<span class="c"># 4) tools/call</span>
+curl -s -X POST "$URL" "${H[@]}" -H "Mcp-Session-Id: $SESSION_ID" \
+  --data '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get-current-weather","arguments":{"query_q":"London"}}}'</code></pre></div>
+      <div class="note ok"><span class="mark m-ok">실측 확인</span><div><p><code>tools/list</code>에 <code>get-current-weather</code>(입력 <code>query_q</code>)가 나오고, <code>tools/call</code>은 London 날씨 JSON과 <code>"isError": false</code>를 돌려줍니다. 인자 이름은 Kong이 바꿉니다. 쿼리 <code>q</code>는 <code>query_q</code>, 경로 <code>{id}</code>는 <code>path_id</code>, body는 <code>body</code>가 됩니다.</p></div></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>증상</th><th>원인</th><th>조치</th></tr></thead>
+        <tbody>
+          <tr><td><code>{"code":1005,"message":"API URL is invalid."}</code></td><td><code>$SESSION_ID</code>가 비어 있음. 세션 헤더가 없는 요청은 upstream으로 그대로 전달되어 weatherapi가 거부</td><td>initialize 먼저</td></tr>
+          <tr><td>404 <code>no Route matched</code></td><td>설정이 DP에 반영되기 전</td><td>5~10초 대기</td></tr>
+          <tr><td>tool 편집 화면에 필드가 없음</td><td>passthrough 모드</td><td>conversion-listener로 다시 만들기</td></tr>
+        </tbody>
+      </table></div>
+      <div class="code"><div class="code-bar">MCP 클라이언트로 확인</div><pre><code>npx @modelcontextprotocol/inspector      <span class="c"># Streamable HTTP, http://localhost:8000/weather/</span>
+claude mcp add --transport http weather http://localhost:8000/weather/</code></pre></div>
+
+      <div class="deep" id="m8-deep">
+        <span class="deep-tag">심화</span>
+        <h3>MCP 인증·인가 (기업 환경)</h3>
+        <p class="prose">MCP tool은 주문 생성, DB 조회, 사내 API 호출처럼 <b>실제 시스템을 조작</b>합니다. 워크숍 상태 그대로 노출하면 아래 위험이 생깁니다.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>위험</th><th>내용</th></tr></thead>
+          <tbody>
+            <tr><td>누구나 호출</td><td>weather-mcp는 인증이 없고, 아무 세션 ID나 넣어도 통과했습니다 <span class="mark m-ok">실측 확인</span></td></tr>
+            <tr><td>우회 경로</td><td>세션 헤더가 없는 요청은 upstream으로 그대로 전달됐습니다 <span class="mark m-ok">실측 확인</span></td></tr>
+            <tr><td>과도한 권한</td><td>모든 사용자가 조회와 삭제를 구분 없이 모든 tool을 호출</td></tr>
+            <tr><td>토큰 재사용 (confused deputy)</td><td>클라이언트 토큰을 upstream에 그대로 넘기면 upstream이 그 토큰으로 다른 시스템까지 접근 가능</td></tr>
+            <tr><td>추적 불가</td><td>누가 어떤 tool로 무엇을 했는지 기록이 없음</td></tr>
+          </tbody>
+        </table></div>
+        <p class="prose">필요한 것은 네 가지입니다. <b>인증</b>(누구인가), <b>인가</b>(어떤 tool까지 되는가), <b>자격증명 분리</b>(upstream 키는 Kong만 앎), <b>감사</b>.</p>
+
+        <h4>인증 방식 선택</h4>
+        <div class="table-wrap"><table>
+          <thead><tr><th>방식</th><th>Kong 플러그인</th><th>적합한 호출자</th><th>특징</th></tr></thead>
+          <tbody>
+            <tr><td>API Key</td><td><code>key-auth</code></td><td>NHI (에이전트, 배치, 서버 간)</td><td>가장 단순. 키 수명과 폐기 관리 필요 (ttl, Vault 연동)</td></tr>
+            <tr><td>JWT</td><td><code>jwt</code></td><td>NHI, 서비스</td><td>공개키로 서명만 검증. 발급은 외부</td></tr>
+            <tr><td>OIDC</td><td><code>openid-connect</code> (Enterprise)</td><td>HI (IDE, Claude Code 사용자)</td><td>Okta, Entra ID, Keycloak 등 SSO. 그룹과 scope 기반</td></tr>
+            <tr><td>MCP OAuth 2.1</td><td><code>ai-mcp-oauth2</code> (3.12+, AI Gateway Enterprise)</td><td>MCP 표준 클라이언트</td><td>MCP 사양의 인가 방식을 Kong이 Resource Server로 구현</td></tr>
+          </tbody>
+        </table></div>
+        <div class="note tip"><span class="mark m-tip">팁</span><div><p>사람(HI)은 IdP 기반 OIDC/OAuth로, 에이전트와 배치(NHI)는 수명이 짧은 키나 클라이언트 자격증명으로 인증합니다. 사람과 에이전트가 consumer 하나를 같이 쓰지 않게 하세요.</p></div></div>
+
+        <h4>MCP 표준 인가 흐름 (OAuth 2.1)</h4>
+        <div class="code"><div class="code-bar">흐름</div><pre><code>MCP 클라이언트          Kong (ai-mcp-oauth2)            인가 서버 (Okta 등)       MCP upstream
+     │── tools/list ────────►│                                  │                       │
+     │◄─ 401 + WWW-Authenticate (resource metadata 위치) ─────│                       │
+     │── 메타데이터 조회 ───►│  (어느 인가 서버를 쓰는지)          │                       │
+     │── 로그인·동의 ──────────────────────────────────────────►│                       │
+     │◄─ access token (audience = 이 MCP 서버) ─────────────────│                       │
+     │── tools/call + Bearer ►│── 토큰 검증 (introspection / JWKS) ─►│                  │
+     │                        │── 토큰 제거, claim → 헤더 ─────────────────────────────►│
+     │◄──────────────────────────── 결과 ─────────────────────────────────────────────│</code></pre></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th><code>ai-mcp-oauth2</code> 필드</th><th>의미</th></tr></thead>
+          <tbody>
+            <tr><td><code>resource</code></td><td>보호 대상 MCP 서버의 식별 URI (토큰 audience 검증 기준)</td></tr>
+            <tr><td><code>authorization_servers</code></td><td>신뢰하는 인가 서버 목록</td></tr>
+            <tr><td><code>introspection_endpoint</code></td><td>불투명 토큰 검증 (설정 시 우선)</td></tr>
+            <tr><td><code>jwks_endpoint</code></td><td>JWT 로컬 검증용 공개키 (introspection 미설정 시)</td></tr>
+            <tr><td><code>client_id</code>, <code>client_auth</code></td><td>Kong이 인가 서버에 인증하는 방식</td></tr>
+            <tr><td><code>claim_to_header</code>, <code>upstream_headers</code></td><td>토큰 claim(사용자 ID, 그룹)을 upstream 헤더로 전달</td></tr>
+            <tr><td><code>passthrough_credentials</code></td><td>기본 <code>false</code>. 클라이언트 토큰을 upstream에 넘기지 않음</td></tr>
+          </tbody>
+        </table></div>
+        <div class="note lab"><span class="mark m-lab">미검증 권장안</span><div><p>공식 문서는 <code>ai-mcp-oauth2</code>를 <code>ai-mcp-proxy</code>의 <code>conversion-listener</code>와 같은 route에서 함께 쓰지 말라고 합니다. REST 변환형(weather-mcp)에는 OIDC나 key-auth를, passthrough형 MCP 서버에는 <code>ai-mcp-oauth2</code>를 조합하는 방안을 검토하세요.</p></div></div>
+
+        <h4>인가: tool 단위 접근 제어</h4>
+        <div class="table-wrap"><table>
+          <thead><tr><th><code>ai-mcp-proxy</code> ACL 필드</th><th>의미</th></tr></thead>
+          <tbody>
+            <tr><td><code>acl_attribute_type</code></td><td>판정 기준: <code>consumer</code> 또는 <code>oauth_access_token</code> (토큰 claim)</td></tr>
+            <tr><td><code>access_token_claim_field</code></td><td>판정에 쓸 claim (예: <code>groups</code>)</td></tr>
+            <tr><td><code>default_acl</code></td><td>기본 허용·거부</td></tr>
+            <tr><td><code>tools[].acl.allow</code> / <code>deny</code></td><td>tool별 허용·거부 대상. Konnect UI의 tool 편집 → Access control</td></tr>
+          </tbody>
+        </table></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>예: 주문 시스템 tool</th><th>성격</th><th>allow</th></tr></thead>
+          <tbody>
+            <tr><td><code>list_products</code>, <code>get_product</code></td><td>조회</td><td>전 직원 그룹</td></tr>
+            <tr><td><code>create_order</code></td><td>쓰기</td><td><code>order-operators</code></td></tr>
+            <tr><td><code>update_order_status</code></td><td>상태 변경</td><td><code>order-admins</code></td></tr>
+          </tbody>
+        </table></div>
+        <p class="prose">최소 권한 원칙에 따라 조회와 쓰기 tool을 나누고, 쓰기 tool은 기본으로 거부한 뒤 필요한 대상만 허용합니다.</p>
+
+        <h4>자격증명 분리: upstream 키는 Kong만</h4>
+        <div class="code"><div class="code-bar">구조</div><pre><code>클라이언트 ──(사용자 토큰 / apikey)──► Kong ──(upstream 전용 키)──► MCP 서버 / REST API
+                                        ↑ 클라이언트 자격증명 제거, upstream 키 주입</code></pre></div>
+        <div class="prose"><ul>
+          <li>weather-mcp: weatherapi 키를 Kong이 tool query에 넣으므로 클라이언트는 키를 모릅니다 <span class="mark m-ok">실측 확인</span></li>
+          <li>Serverless 실습의 <code>/mcp</code>: 클라이언트 <code>apikey</code>는 <code>hide_credentials: true</code>로 지우고, upstream용 <code>Authorization: Bearer</code>는 <code>request-transformer</code>로 넣었습니다 <span class="mark m-ok">실측 확인</span></li>
+          <li>운영에서는 upstream 키를 평문 대신 Vault 참조(<code>{vault://...}</code>)로 둡니다</li>
+        </ul></div>
+
+        <h4>실습: weather-mcp에 인증·인가 걸기 <span class="mark m-lab">미검증 권장안</span></h4>
+        <div class="prose"><ol>
+          <li><code>weather-mcp</code> → <b>Access</b> 탭 → <b>Add auth strategy</b> → Key-Auth</li>
+          <li><code>apikey</code> 없이 <code>tools/list</code> 호출 → 401 확인</li>
+          <li><code>apikey: my-secret-key</code>로 initialize → tools/call → 200 확인</li>
+          <li><code>get-current-weather</code> → Access control → <b>Allow</b>에 <code>ai-developer</code>만 추가</li>
+          <li>다른 consumer(<code>ai-intern</code>)를 만들어 호출 → 거부 확인</li>
+          <li>심화: Keycloak이나 Okta 개발자 계정으로 <code>openid-connect</code>를 적용하고, 사용자 그룹으로 ACL 판정 (<code>acl_attribute_type: oauth_access_token</code>, <code>access_token_claim_field: groups</code>)</li>
+        </ol></div>
+      </div>
+    </section>
+
+    <!-- ================= 9 ================= -->
+    <section class="module" id="m9" data-mod="m9">
+      <div class="mod-head">
+        <span class="mod-num">09</span>
+        <h2>A2A Connectivity</h2>
+        <label class="check"><input type="checkbox" id="done-m9"> 학습 완료</label>
+        <p class="goal">에이전트끼리의 통신(A2A)을 Kong으로 중계합니다. Agent Card 주소를 재작성하고 메시지 단위로 기록합니다.</p>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th></th><th>MCP (8)</th><th>A2A (9)</th></tr></thead>
+        <tbody>
+          <tr><td>관계</td><td>에이전트 → 도구</td><td>에이전트 → 에이전트</td></tr>
+          <tr><td>상대</td><td>판단하지 않는 기능 (날씨 API)</td><td>자체 LLM으로 판단하는 서비스</td></tr>
+          <tr><td>자기소개</td><td><code>tools/list</code></td><td>Agent Card <code>/.well-known/agent-card.json</code></td></tr>
+          <tr><td>호출</td><td><code>tools/call</code> + 인자</td><td><code>message/send</code> + 자연어</td></tr>
+          <tr><td>결과</td><td>즉시 결과</td><td>Task (<code>status.state</code>, <code>artifacts</code>, <code>contextId</code>)</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>에이전트 실행</h3>
+      <div class="note warn"><span class="mark m-warn">원본과 다름</span><div><p>원본 compose에는 네트워크 설정이 없어서 Kong DP가 <code>a2a-kongair-agent</code>라는 이름을 찾지 못합니다. DP 네트워크(<code>kong-ai-quickstart-net</code>)에 붙이세요.</p></div></div>
+      <div class="code"><div class="code-bar">docker-compose.yaml</div><pre><code>services:
+  a2a-agent:
+    container_name: a2a-kongair-agent
+    image: ghcr.io/tomek-labuk/a2a-kongair-openai-agent:1.0.0
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=gpt-4o-mini
+      - KONGAIR_BASE_URL=https://api.kong-air.com
+      - PUBLIC_AGENT_URL=http://localhost:10000
+    ports:
+      - "10000:10000"
+    networks:
+      - kong-ai-quickstart-net
+networks:
+  kong-ai-quickstart-net:
+    external: true</code></pre></div>
+      <p class="prose"><code>docker compose up -d --wait</code>로 실행하고, <code>curl -s http://localhost:10000/.well-known/agent-card.json</code>으로 직접 조회해 <code>url</code> 값을 기억해 둡니다.</p>
+
+      <h3>Agent 엔티티 등록</h3>
+      <div class="code"><div class="code-bar">kongctl</div><pre><code>kongctl apply -f - --auto-approve --pat "$KONNECT_TOKEN" &lt;&lt; 'EOF'
+ai_gateway_agents:
+  - ref: kongair-flight-booking-agent
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    display_name: "Kong Air Flight Booking Agent"
+    name: kong-air-flight-booking-agent
+    type: a2a
+    enabled: true
+    config:
+      url: http://a2a-kongair-agent:10000
+      route:
+        paths:
+          - /a2a
+        methods:
+          - GET
+          - POST
+        protocols:
+          - http
+          - https
+        strip_path: true
+      logging:
+        payloads: true
+        statistics: true
+        max_payload_size: 1048576
+      max_request_body_size: 8388608
+EOF</code></pre></div>
+
+      <h3>Agent Card와 메시지 전송</h3>
+      <div class="code"><div class="code-bar">테스트</div><pre><code><span class="c"># Kong 경유 Agent Card — 직접 조회한 url과 비교</span>
+curl "$KONNECT_PROXY_URL/a2a/.well-known/agent-card.json" --no-progress-meter --fail-with-body
+
+<span class="c"># 메시지 전송</span>
+curl -X POST "$KONNECT_PROXY_URL/a2a/" --no-progress-meter --fail-with-body \
+  -H "Content-Type: application/json" \
+  --json '{
+    "jsonrpc": "2.0", "id": "1", "method": "message/send",
+    "params": {"message": {"kind": "message", "messageId": "msg-001", "role": "user",
+      "parts": [{"kind": "text", "text": "What flights are available on route KA-123?"}]}}
+  }'</code></pre></div>
+      <div class="code"><div class="code-bar">응답 구조</div><pre><code>{"result": {
+  "kind": "task",
+  "id": "...",                       <span class="c">// 작업 ID</span>
+  "contextId": "...",                <span class="c">// 후속 질문에 재사용</span>
+  "status": {"state": "completed"},
+  "artifacts": [{"name": "response", "parts": [{"kind": "text", "text": "..."}]}]
+}}</code></pre></div>
+      <div class="note ok"><span class="mark m-ok">실측 확인</span><div><p>에이전트가 항공편 목록을 답했지만, KA-123으로 걸러 내지 않고 전체 목록을 돌려줬습니다. A2A 에이전트는 스스로 판단하기 때문에 결과를 보장할 수 없고, 그래서 Kong의 payload 로깅이 감사와 품질 관리 수단이 됩니다. 후속 질문은 <code>message</code>에 이전 <code>contextId</code>를 넣어 보냅니다.</p></div></div>
+
+      <h3>모델 정책이 A2A에 적용되지 않는 이유</h3>
+      <div class="code"><div class="code-bar">경로</div><pre><code>① client ─A2A─► Kong /a2a ─► agent             <span class="c">Kong 경유, A2A 형식이라 모델 정책 대상 아님</span>
+② agent 내부 LLM 호출 ───────────► api.openai.com   <span class="c">Kong 미경유</span></code></pre></div>
+      <p class="prose">에이전트(langchain <code>ChatOpenAI</code>)의 LLM 호출까지 통제하려면 에이전트 전용 모델을 만들고, <code>OPENAI_BASE_URL</code>이 Kong을 가리키게 합니다.</p>
+      <div class="code"><div class="code-bar">compose environment <span class="mark m-lab">미검증 권장안</span></div><pre><code>- OPENAI_BASE_URL=http://kong-ai-quickstart-gateway:8000/v1
+- OPENAI_MODEL=agent-gpt-4o-mini     <span class="c"># 에이전트 전용 모델 별칭</span></code></pre></div>
+      <p class="prose">예상되는 문제는 세 가지입니다. SDK는 키를 <code>Authorization: Bearer</code>로 보내므로 Key-Auth의 <code>apikey</code>와 맞지 않고, 템플릿 강제와 semantic routing에 걸릴 수 있습니다. 공유 모델 대신 전용 모델을 쓰는 이유입니다.</p>
+    </section>
+
+    <!-- ================= 10 ================= -->
+    <section class="module" id="m10" data-mod="m10">
+      <div class="mod-head">
+        <span class="mod-num">10</span>
+        <h2>모듈 간 간섭과 권장 구성</h2>
+        <label class="check"><input type="checkbox" id="done-m10"> 학습 완료</label>
+        <p class="goal">원본은 모든 정책을 <code>my-gpt-4o</code> 하나에 쌓습니다. 그래서 뒤 모듈이 앞 모듈의 요청을 깨뜨립니다. 아래 사례는 모두 실측입니다.</p>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>누적된 설정</th><th>영향받는 요청</th><th>증상</th></tr></thead>
+        <tbody>
+          <tr><td>3 Rate limit 200 토큰</td><td>4~6 전체</td><td class="num">429</td></tr>
+          <tr><td>4 Guard + 7 Template</td><td>템플릿 요청</td><td>500 <code>only supports llm/v1/chat</code></td></tr>
+          <tr><td>6 Routing threshold 0.8</td><td>일반 질문 (Hello Kong 등)</td><td>503 <code>No peers are available</code></td></tr>
+          <tr><td>7 <code>allow_untemplated_requests: false</code></td><td>1~6의 모든 일반 요청</td><td>400 <code>only supports templated requests</code></td></tr>
+          <tr><td>6 Mistral target (가중치)</td><td>4~5</td><td>가끔 Mistral 응답, 캐시 Miss</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>한 모델로 진행할 때의 정책 ON/OFF</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>테스트 모듈</th><th>Rate Limit</th><th>Guard</th><th>Cache</th><th>Routing</th><th>Decorator</th><th>Template</th></tr></thead>
+        <tbody>
+          <tr><td>1~2</td><td><span class="pill p-off">off</span></td><td><span class="pill p-off">off</span></td><td><span class="pill p-off">off</span></td><td><span class="pill p-off">off</span></td><td><span class="pill p-off">off</span></td><td><span class="pill p-off">off</span></td></tr>
+          <tr><td>3</td><td><span class="pill p-on">200</span></td><td><span class="pill p-off">off</span></td><td><span class="pill p-off">off</span></td><td><span class="pill p-off">off</span></td><td><span class="pill p-off">off</span></td><td><span class="pill p-off">off</span></td></tr>
+          <tr><td>4</td><td><span class="pill p-mid">100000</span></td><td><span class="pill p-on">on</span></td><td><span class="pill p-off">off</span></td><td><span class="pill p-off">off</span></td><td><span class="pill p-off">off</span></td><td><span class="pill p-off">off</span></td></tr>
+          <tr><td>5</td><td><span class="pill p-mid">100000</span></td><td><span class="pill p-mid">on</span></td><td><span class="pill p-on">on</span></td><td><span class="pill p-off">off</span></td><td><span class="pill p-off">off</span></td><td><span class="pill p-off">off</span></td></tr>
+          <tr><td>6</td><td><span class="pill p-mid">100000</span></td><td><span class="pill p-mid">on</span></td><td><span class="pill p-mid">on</span></td><td><span class="pill p-on">on</span></td><td><span class="pill p-off">off</span></td><td><span class="pill p-off">off</span></td></tr>
+          <tr><td>7</td><td><span class="pill p-mid">100000</span></td><td><span class="pill p-off">off</span></td><td><span class="pill p-mid">on</span></td><td><span class="pill p-mid">on</span></td><td><span class="pill p-on">on</span></td><td><span class="pill p-on">on</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>권장: 용도별 모델 분리 <span class="mark m-lab">미검증 권장안</span></h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>모델 별칭</th><th>정책</th><th>용도</th></tr></thead>
+        <tbody>
+          <tr><td><code>my-gpt-4o</code></td><td>Key-Auth, Rate Limit, Guard, Cache</td><td>1~5모듈, 범용</td></tr>
+          <tr><td><code>smart-router</code></td><td>Key-Auth, Semantic Routing</td><td>6모듈</td></tr>
+          <tr><td><code>support-bot</code></td><td>Key-Auth, Decorator, Template(<code>false</code>)</td><td>7모듈</td></tr>
+          <tr><td><code>agent-gpt-4o-mini</code></td><td>Key-Auth(에이전트 consumer), Rate Limit</td><td>9모듈 에이전트 LLM</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note tip"><span class="mark m-tip">팁</span><div><p>실무 원칙은 한 모델에 한 용도입니다. 정책 조합 충돌과 디버깅 비용이 줄고, 사람(HI)과 에이전트(NHI)의 인증을 나누는 설계와도 맞습니다.</p></div></div>
+    </section>
+
+    <!-- ================= 11 ================= -->
+    <section class="module" id="m11" data-mod="m11">
+      <div class="mod-head">
+        <span class="mod-num">11</span>
+        <h2>트러블슈팅 한눈에 보기</h2>
+        <label class="check"><input type="checkbox" id="done-m11"> 학습 완료</label>
+        <p class="goal">오류 메시지로 원인과 조치를 바로 찾습니다.</p>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>오류 메시지</th><th>모듈</th><th>원인</th><th>조치</th></tr></thead>
+        <tbody>
+          <tr><td><code>port is already allocated</code></td><td class="num">0</td><td>다른 DP가 8000 사용</td><td>기존 DP 중지 또는 <code>-p 8100:8000</code></td></tr>
+          <tr><td>응답 없음 (HTTP 000)</td><td class="num">0</td><td>DP 재시작 시 포트 연결 누락</td><td><code>docker restart &lt;dp&gt;</code></td></tr>
+          <tr><td><code>ERR unknown command 'FT._LIST'</code></td><td class="num">0</td><td>Homebrew·OS 패키지 redis (벡터 미지원)</td><td>Redis Stack 사용</td></tr>
+          <tr><td>Linux에서 Redis 연결 실패 (<code>host.docker.internal</code>)</td><td class="num">4~6</td><td>Docker Engine은 이 이름을 기본 제공하지 않음</td><td>Redis를 DP 네트워크에 띄우고 host를 <code>redis-stack</code>으로</td></tr>
+          <tr><td><code>AI token rate limit exceeded</code></td><td class="num">3~</td><td>토큰 한도</td><td>한도 상향, 60초 대기</td></tr>
+          <tr><td><code>vectordb.dimensions - required field missing</code></td><td class="num">4</td><td>필수 필드</td><td>1536 / cosine</td></tr>
+          <tr><td><code>unable to generate embeddings ... 401</code></td><td class="num">4~6</td><td>임베딩 Auth 값</td><td><code>Bearer sk-...</code> 다시 입력</td></tr>
+          <tr><td>막혀야 할 질문이 200</td><td class="num">4</td><td>threshold 미설정, 추상적 거부 주제</td><td>threshold 0.5, 질문형 거부 주제</td></tr>
+          <tr><td><code>failed to get balancer instance</code></td><td class="num">6</td><td>vectordb SSL 켜짐</td><td>SSL 끄기</td></tr>
+          <tr><td><code>No peers are available</code></td><td class="num">6~</td><td>threshold가 너무 낮거나 일반 질문</td><td>0.8, 모델 분리</td></tr>
+          <tr><td><code>ai-semantic-prompt-guard only supports llm/v1/chat</code></td><td class="num">7</td><td>Guard가 템플릿보다 먼저 실행</td><td>Guard 끄기</td></tr>
+          <tr><td><code>only 'llm/v1/chat' ... supported for templating</code></td><td class="num">7</td><td>원본 요청 형식</td><td><code>{template://name}</code> + <code>properties</code></td></tr>
+          <tr><td><code>this LLM route only supports templated requests</code></td><td class="num">7~</td><td><code>allow_untemplated_requests: false</code></td><td>정상 동작. 필요하면 <code>true</code></td></tr>
+          <tr><td><code>{"code":1005,"message":"API URL is invalid."}</code></td><td class="num">8</td><td>MCP 세션 헤더 없음</td><td>initialize 먼저</td></tr>
+          <tr><td>A2A 502, 이름 해석 실패</td><td class="num">9</td><td>에이전트가 DP 네트워크 밖</td><td>compose <code>networks</code> 추가</td></tr>
+        </tbody>
+      </table></div>
+      <h3>디버깅 도구</h3>
+      <div class="code"><div class="code-bar">bash</div><pre><code><span class="c"># DP 로그 — 원인 대부분이 여기 있음</span>
+docker logs --since 5m kong-ai-quickstart-gateway 2&gt;&amp;1 | grep -viE "broker|GET /status" | grep -iE "error|warn"
+
+<span class="c"># 현재 설정 조회</span>
+kongctl get ai-gateway models       --gateway-id $AI_GATEWAY_ID -o json --pat "$KONNECT_TOKEN"
+kongctl get ai-gateway policies     --gateway-id $AI_GATEWAY_ID -o json --pat "$KONNECT_TOKEN"
+kongctl get ai-gateway mcp-servers  --gateway-id $AI_GATEWAY_ID -o json --pat "$KONNECT_TOKEN"
+
+<span class="c"># 벡터 인덱스</span>
+docker exec redis-stack redis-cli FT._LIST</code></pre></div>
+    </section>
+
+    <!-- ================= 12 ================= -->
+    <section class="module" id="m12" data-mod="m12">
+      <div class="mod-head">
+        <span class="mod-num">12</span>
+        <h2>정리</h2>
+        <label class="check"><input type="checkbox" id="done-m12"> 학습 완료</label>
+        <p class="goal">실습에 쓴 컨테이너와 키를 정리합니다.</p>
+      </div>
+      <div class="code"><div class="code-bar">bash</div><pre><code>docker compose down                                  <span class="c"># A2A 에이전트 (9모듈 디렉토리에서)</span>
+docker rm -f kong-ai-quickstart-gateway              <span class="c"># DP</span>
+docker rm -f redis-stack                             <span class="c"># Redis Stack</span>
+brew services start redis                            <span class="c"># macOS: 멈췄다면 Homebrew redis 복구</span></code></pre></div>
+      <p class="prose">Konnect에서 <code>ai-quickstart</code> AI Gateway를 삭제하고, 사용한 PAT와 OpenAI·Mistral 키를 폐기하거나 사용 한도를 확인합니다.</p>
+    </section>
+
+    <footer>
+      <p>공식 문서</p>
+      <ul>
+        <li><a href="https://developer.konghq.com/plugins/ai-prompt-template/" target="_blank" rel="noopener">AI Prompt Template</a> · <a href="https://developer.konghq.com/plugins/ai-prompt-decorator/" target="_blank" rel="noopener">AI Prompt Decorator</a> · <a href="https://developer.konghq.com/plugins/ai-semantic-prompt-guard/" target="_blank" rel="noopener">AI Semantic Prompt Guard</a></li>
+        <li><a href="https://developer.konghq.com/plugins/ai-mcp-proxy/" target="_blank" rel="noopener">AI MCP Proxy</a> · <a href="https://developer.konghq.com/plugins/ai-mcp-oauth2/" target="_blank" rel="noopener">AI MCP OAuth2</a> · <a href="https://developer.konghq.com/plugins/openid-connect/" target="_blank" rel="noopener">OpenID Connect</a> · <a href="https://developer.konghq.com/kongctl/" target="_blank" rel="noopener">kongctl</a></li>
+      </ul>
+      <p>학습 완료 체크는 이 브라우저에만 저장됩니다.</p>
+    </footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  var KEY = "kong-ai-workshop-done";
+  var store = {};
+  try { store = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { store = {}; }
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.check input'));
+  var links = {};
+  document.querySelectorAll('#toc a').forEach(function (a) { links[a.getAttribute('href').slice(1)] = a; });
+
+  function render() {
+    var done = 0;
+    boxes.forEach(function (b) {
+      var id = b.id.replace('done-', '');
+      if (links[id]) links[id].classList.toggle('is-done', b.checked);
+      if (b.checked) done++;
+    });
+    document.getElementById('progress-text').textContent = done + ' / ' + boxes.length + ' 완료';
+    document.getElementById('progress-bar').style.width = (done / boxes.length * 100) + '%';
+  }
+  boxes.forEach(function (b) {
+    b.checked = !!store[b.id];
+    b.addEventListener('change', function () {
+      store[b.id] = b.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+      render();
+    });
+  });
+  render();
+
+  // copy buttons
+  document.querySelectorAll('.code').forEach(function (block) {
+    var bar = block.querySelector('.code-bar');
+    var code = block.querySelector('pre code');
+    if (!bar || !code) return;
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'copy'; btn.textContent = '복사';
+    btn.setAttribute('aria-label', '코드 복사');
+    btn.addEventListener('click', function () {
+      var text = code.innerText;
+      function ok() { btn.textContent = '복사됨'; setTimeout(function () { btn.textContent = '복사'; }, 1400); }
+      function fallback() {
+        var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); ok(); } catch (e) { btn.textContent = '복사 실패'; }
+        document.body.removeChild(ta);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, fallback);
+      else fallback();
+    });
+    bar.appendChild(btn);
+  });
+
+  // OS tabs
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('#os-tabs [role="tab"]'));
+  function selectTab(tab, save) {
+    tabs.forEach(function (t) {
+      var on = t === tab;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+    });
+    if (save) { try { localStorage.setItem('kong-ai-workshop-os', tab.id); } catch (e) {} }
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { selectTab(t, true); });
+    t.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      selectTab(n, true); n.focus();
+    });
+  });
+  var saved = null;
+  try { saved = localStorage.getItem('kong-ai-workshop-os'); } catch (e) {}
+  var ua = navigator.userAgent || '';
+  var guess = /Windows/i.test(ua) ? 'tab-win' : (/Linux/i.test(ua) && !/Android/i.test(ua)) ? 'tab-linux' : 'tab-mac';
+  var initial = document.getElementById(saved || guess);
+  if (initial) selectTab(initial, false);
+
+  // active section in index
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) {
+          Object.keys(links).forEach(function (k) { links[k].classList.remove('active'); });
+          var l = links[en.target.id]; if (l) l.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    document.querySelectorAll('section.module').forEach(function (s) { io.observe(s); });
+  }
+})();
+</script>
+</body>
+</html>
