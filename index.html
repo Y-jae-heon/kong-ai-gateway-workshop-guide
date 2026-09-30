@@ -706,7 +706,7 @@ curl -s -X POST "$KONNECT_PROXY_URL/v1/chat/completions" -H "apikey: my-secret-k
         <div class="card"><h4><code>true</code> · 기본값</h4><p>템플릿 요청과 일반 요청을 모두 허용합니다. 템플릿은 자주 쓰는 프롬프트를 저장해 두는 편의 기능이 됩니다.</p></div>
         <div class="card"><h4><code>false</code> · 통제 수단</h4><p>템플릿 요청만 허용합니다. 클라이언트는 변수만 채우고 프롬프트 틀은 Kong이 관리합니다. 용도 외 사용과 비용을 막고, 프롬프트를 바꿀 때 앱을 다시 배포할 필요가 없습니다.</p></div>
       </div>
-      <p class="prose">한계도 있습니다. 변수 값 안에 들어온 프롬프트 인젝션은 막지 못하고, Claude Code나 A2A 에이전트처럼 자유롭게 대화해야 하는 클라이언트는 이 모델을 쓸 수 없습니다.</p>
+      <p class="prose">한계도 있습니다. 변수 값 안에 들어온 프롬프트 인젝션은 막지 못하고, 코딩 에이전트나 A2A 에이전트처럼 자유롭게 대화해야 하는 클라이언트는 이 모델을 쓸 수 없습니다.</p>
       <div class="note warn"><span class="mark m-warn">원본과 다름</span><div><p>Semantic Prompt Guard와 같은 모델에서 함께 쓸 수 없습니다(실측). Guard가 템플릿이 적용되기 전의 요청을 먼저 검사해서 500 <code>ai-semantic-prompt-guard only supports llm/v1/chat</code>이 납니다. 7모듈 동안 Guard를 끄세요. 다른 모듈로 돌아갈 때는 <code>allow_untemplated_requests</code>를 <code>true</code>로 바꾸거나 Template 정책을 끕니다.</p></div></div>
 
       <div class="deep" id="m7-deep">
@@ -722,7 +722,7 @@ messages: [                            messages: [
         <div class="table-wrap"><table>
           <thead><tr><th>지시 위치</th><th>예</th><th>특징</th></tr></thead>
           <tbody>
-            <tr><td>클라이언트</td><td>앱의 system prompt, <code>CLAUDE.md</code>, <code>AGENTS.md</code></td><td>팀·저장소별. 사용자가 바꾸거나 빼먹을 수 있음</td></tr>
+            <tr><td>클라이언트</td><td>앱의 system prompt, 저장소 지시 파일(<code>AGENTS.md</code> 등)</td><td>팀·저장소별. 사용자가 바꾸거나 빼먹을 수 있음</td></tr>
             <tr><td><b>게이트웨이 (Decorator)</b></td><td>Kong 정책</td><td>조직 전체에 강제. 클라이언트 종류와 무관. 바꿔도 재배포 불필요. 감사 가능</td></tr>
           </tbody>
         </table></div>
@@ -751,7 +751,7 @@ messages: [                            messages: [
           <thead><tr><th>한계</th><th>설명</th><th>보완</th></tr></thead>
           <tbody>
             <tr><td>권고일 뿐</td><td>모델이 지시를 무시할 수 있어 중복 0을 보장하지 못함</td><td>CI 중복 탐지(jscpd, SonarQube), 코드 리뷰</td></tr>
-            <tr><td>지시 충돌</td><td>에이전트 자체 prompt나 <code>CLAUDE.md</code>와 어긋나면 동작 예측이 어려움</td><td>조직 지시는 짧고 원칙 수준으로</td></tr>
+            <tr><td>지시 충돌</td><td>에이전트 자체 prompt나 저장소 지시 파일과 어긋나면 동작 예측이 어려움</td><td>조직 지시는 짧고 원칙 수준으로</td></tr>
             <tr><td>토큰 비용</td><td>매 요청에 붙음. 에이전트는 작업 하나에 수십~수백 번 호출</td><td>지시문을 짧게</td></tr>
             <tr><td>프롬프트 캐시</td><td>지시문이 매번 바뀌면(시각, 사용자명 삽입) 제공자의 prompt caching이 깨져 비용과 지연이 늘어남</td><td>고정 텍스트만 사용</td></tr>
             <tr><td>적용 범위</td><td>Kong을 거치는 호출에만 적용</td><td>LLM 호출 경로를 Kong으로 일원화 (9장)</td></tr>
@@ -768,22 +768,7 @@ messages: [                            messages: [
           </tbody>
         </table></div>
 
-        <h4>Anthropic 형식 코딩 에이전트 연결 시 주의</h4>
-        <div class="note ok"><span class="mark m-ok">실측 확인</span><div>
-          <p>Claude Code → Kong(<code>ai-proxy</code>, anthropic) + Decorator 조합에서 400 <code>tools: Input should be a valid array</code>가 났습니다.</p>
-          <p>Claude Code는 도구가 없어도 <code>tools: []</code>를 보냅니다. Decorator가 JSON을 Lua 테이블로 풀었다가 다시 인코딩하면서 빈 배열이 <code>{}</code>로 바뀌고, Anthropic API가 이를 거부합니다. 임시 해결책은 Decorator 대신 <code>pre-function</code>에서 빈 배열을 보존한 채 <code>system</code>에 직접 넣는 것입니다.</p>
-        </div></div>
-        <div class="code"><div class="code-bar">pre-function (access, Lua)</div><pre><code>local cjson = require("cjson.safe").new()
-cjson.decode_array_with_array_mt(true)          <span class="c">-- [] 를 [] 로 유지</span>
-local body = cjson.decode(kong.request.get_raw_body() or "")
-if type(body) ~= "table" then return end
-local prompt = "&lt;조직 공통 지시&gt;"
-local sys = body.system
-if sys == nil then body.system = prompt
-elseif type(sys) == "string" then body.system = prompt .. "\n" .. sys
-elseif type(sys) == "table" then table.insert(sys, 1, { type = "text", text = prompt }) end
-kong.service.request.set_raw_body(cjson.encode(body))</code></pre></div>
-        <div class="note tip"><span class="mark m-tip">팁</span><div><p>코딩 에이전트용 모델에는 Decorator(또는 위 pre-function)만 붙이고, Template과 semantic routing은 붙이지 않는 편이 안전합니다.</p></div></div>
+        <div class="note tip"><span class="mark m-tip">팁</span><div><p>코딩 에이전트용 모델에는 Decorator만 붙이고, Template과 semantic routing은 붙이지 않는 편이 안전합니다.</p></div></div>
       </div>
     </section>
 
@@ -851,8 +836,7 @@ curl -s -X POST "$URL" "${H[@]}" -H "Mcp-Session-Id: $SESSION_ID" \
           <tr><td>tool 편집 화면에 필드가 없음</td><td>passthrough 모드</td><td>conversion-listener로 다시 만들기</td></tr>
         </tbody>
       </table></div>
-      <div class="code"><div class="code-bar">MCP 클라이언트로 확인</div><pre><code>npx @modelcontextprotocol/inspector      <span class="c"># Streamable HTTP, http://localhost:8000/weather/</span>
-claude mcp add --transport http weather http://localhost:8000/weather/</code></pre></div>
+      <div class="code"><div class="code-bar">MCP 클라이언트로 확인</div><pre><code>npx @modelcontextprotocol/inspector      <span class="c"># Streamable HTTP, http://localhost:8000/weather/</span></code></pre></div>
 
       <div class="deep" id="m8-deep">
         <span class="deep-tag">심화</span>
@@ -876,7 +860,7 @@ claude mcp add --transport http weather http://localhost:8000/weather/</code></p
           <tbody>
             <tr><td>API Key</td><td><code>key-auth</code></td><td>NHI (에이전트, 배치, 서버 간)</td><td>가장 단순. 키 수명과 폐기 관리 필요 (ttl, Vault 연동)</td></tr>
             <tr><td>JWT</td><td><code>jwt</code></td><td>NHI, 서비스</td><td>공개키로 서명만 검증. 발급은 외부</td></tr>
-            <tr><td>OIDC</td><td><code>openid-connect</code> (Enterprise)</td><td>HI (IDE, Claude Code 사용자)</td><td>Okta, Entra ID, Keycloak 등 SSO. 그룹과 scope 기반</td></tr>
+            <tr><td>OIDC</td><td><code>openid-connect</code> (Enterprise)</td><td>HI (IDE·코딩 도구를 쓰는 사람)</td><td>Okta, Entra ID, Keycloak 등 SSO. 그룹과 scope 기반</td></tr>
             <tr><td>MCP OAuth 2.1</td><td><code>ai-mcp-oauth2</code> (3.12+, AI Gateway Enterprise)</td><td>MCP 표준 클라이언트</td><td>MCP 사양의 인가 방식을 Kong이 Resource Server로 구현</td></tr>
           </tbody>
         </table></div>
