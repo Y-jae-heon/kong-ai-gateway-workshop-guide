@@ -768,7 +768,22 @@ messages: [                            messages: [
           </tbody>
         </table></div>
 
-        <div class="note tip"><span class="mark m-tip">팁</span><div><p>코딩 에이전트용 모델에는 Decorator만 붙이고, Template과 semantic routing은 붙이지 않는 편이 안전합니다.</p></div></div>
+        <h4>Anthropic 형식 코딩 에이전트 연결 시 주의</h4>
+        <div class="note ok"><span class="mark m-ok">실측 확인</span><div>
+          <p>Claude Code → Kong(<code>ai-proxy</code>, anthropic) + Decorator 조합에서 400 <code>tools: Input should be a valid array</code>가 났습니다.</p>
+          <p>Claude Code는 도구가 없어도 <code>tools: []</code>를 보냅니다. Decorator가 JSON을 Lua 테이블로 풀었다가 다시 인코딩하면서 빈 배열이 <code>{}</code>로 바뀌고, Anthropic API가 이를 거부합니다. 임시 해결책은 Decorator 대신 <code>pre-function</code>에서 빈 배열을 보존한 채 <code>system</code>에 직접 넣는 것입니다.</p>
+        </div></div>
+        <div class="code"><div class="code-bar">pre-function (access, Lua)</div><pre><code>local cjson = require("cjson.safe").new()
+cjson.decode_array_with_array_mt(true)          <span class="c">-- [] 를 [] 로 유지</span>
+local body = cjson.decode(kong.request.get_raw_body() or "")
+if type(body) ~= "table" then return end
+local prompt = "&lt;조직 공통 지시&gt;"
+local sys = body.system
+if sys == nil then body.system = prompt
+elseif type(sys) == "string" then body.system = prompt .. "\n" .. sys
+elseif type(sys) == "table" then table.insert(sys, 1, { type = "text", text = prompt }) end
+kong.service.request.set_raw_body(cjson.encode(body))</code></pre></div>
+        <div class="note tip"><span class="mark m-tip">팁</span><div><p>코딩 에이전트용 모델에는 Decorator(또는 위 pre-function)만 붙이고, Template과 semantic routing은 붙이지 않는 편이 안전합니다.</p></div></div>
       </div>
     </section>
 
